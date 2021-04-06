@@ -615,19 +615,21 @@ namespace Microsoft.IdentityModel.JsonWebTokens
                 throw LogHelper.LogExceptionMessage(new SecurityTokenException(LogHelper.FormatInvariant(TokenLogMessages.IDX10612)));
 
             var keys = GetContentEncryptionKeys(jwtToken, validationParameters);
-            return JwtTokenUtilities.DecryptJwtToken(jwtToken, validationParameters, new JwtTokenDecryptionParameters
-            {
-                Alg = jwtToken.Alg,
-                AuthenticationTag = jwtToken.AuthenticationTag,
-                Ciphertext = jwtToken.Ciphertext,
-                DecompressionFunction = JwtTokenUtilities.DecompressToken,
-                Enc = jwtToken.Enc,
-                EncodedHeader = jwtToken.EncodedHeader,
-                EncodedToken = jwtToken.EncodedToken,
-                InitializationVector = jwtToken.InitializationVector,
-                Keys = keys,
-                Zip = jwtToken.Zip,
-            });
+            return JwtTokenUtilities.DecryptJwtToken(
+                jwtToken,
+                validationParameters,
+                new JwtTokenDecryptionParameters
+                {
+                    Alg = jwtToken.Alg,
+                    AuthenticationTagBytes = jwtToken._authenticationTagBytes,
+                    CiphertextBytes = jwtToken._ciphertextBytes,
+                    DecompressionFunction = JwtTokenUtilities.DecompressToken,
+                    Enc = jwtToken.Enc,
+                    HeaderAsciiBytes = jwtToken._encodedHeaderAsciiBytes,
+                    InitializationVectorBytes = jwtToken._initializationVectorBytes,
+                    Keys = keys,
+                    Zip = jwtToken.Zip,
+                });
         }
 
         /// <summary>
@@ -830,7 +832,7 @@ namespace Microsoft.IdentityModel.JsonWebTokens
                     if (key.CryptoProviderFactory.IsSupportedAlgorithm(jwtToken.Alg, key))
                     {
                         var kwp = key.CryptoProviderFactory.CreateKeyWrapProviderForUnwrap(key, jwtToken.Alg);
-                        var unwrappedKey = kwp.UnwrapKey(Base64UrlEncoder.DecodeBytes(jwtToken.EncryptedKey));
+                        var unwrappedKey = kwp.UnwrapKey(jwtToken._encryptedKeyBytes);
                         unwrappedKeys.Add(new SymmetricSecurityKey(unwrappedKey));
                     }
                 }
@@ -841,7 +843,7 @@ namespace Microsoft.IdentityModel.JsonWebTokens
                 keysAttempted.AppendLine(key.ToString());
             }
 
-            if (unwrappedKeys.Count > 0 || exceptionStrings.Length == 0)
+            if (unwrappedKeys.Count > 0 && exceptionStrings.Length == 0)
                 return unwrappedKeys;
             else
                 throw LogHelper.LogExceptionMessage(new SecurityTokenKeyWrapException(LogHelper.FormatInvariant(TokenLogMessages.IDX10618, keysAttempted, exceptionStrings, jwtToken)));
@@ -956,9 +958,21 @@ namespace Microsoft.IdentityModel.JsonWebTokens
             if (token.Length > MaximumTokenSizeInBytes)
                 return new TokenValidationResult { Exception = LogHelper.LogExceptionMessage(new ArgumentException(LogHelper.FormatInvariant(TokenLogMessages.IDX10209, token.Length, MaximumTokenSizeInBytes))), IsValid = false };
 
-            var tokenParts = token.Split(new char[] { '.' }, JwtConstants.MaxJwtSegmentCount + 1);
-            if (tokenParts.Length != JwtConstants.JwsSegmentCount && tokenParts.Length != JwtConstants.JweSegmentCount)
-                return new TokenValidationResult { Exception = LogHelper.LogExceptionMessage(new ArgumentException(LogHelper.FormatInvariant(LogMessages.IDX14111, token))), IsValid = false };
+            JsonWebToken jwtToken = null;
+            if (validationParameters.TokenReader != null)
+            {
+                var securityToken = validationParameters.TokenReader(token, validationParameters);
+                if (securityToken == null)
+                    throw LogHelper.LogExceptionMessage(new SecurityTokenInvalidSignatureException(LogHelper.FormatInvariant(TokenLogMessages.IDX10510, token)));
+
+                jwtToken = securityToken as JsonWebToken;
+                if (jwtToken == null)
+                    throw LogHelper.LogExceptionMessage(new SecurityTokenInvalidSignatureException(LogHelper.FormatInvariant(TokenLogMessages.IDX10509, typeof(JsonWebToken), securityToken.GetType(), token)));
+            }
+            else
+            {
+                jwtToken = new JsonWebToken(token);
+            }
 
             var validationParametersCopy = validationParameters;
             if (validationParameters.ConfigurationManager != null)
@@ -990,13 +1004,12 @@ namespace Microsoft.IdentityModel.JsonWebTokens
 
             try
             {
-                if (tokenParts.Length == JwtConstants.JweSegmentCount)
+                if (jwtToken.NumberOfSegments == JwtConstants.JweSegmentCount)
                 {
-                    var jwtToken = new JsonWebToken(token);
-                    var decryptedJwt = DecryptToken(jwtToken, validationParametersCopy);
-                    var innerToken = ValidateSignature(decryptedJwt, validationParametersCopy);
+                    var innerToken = ValidateSignature(new JsonWebToken(DecryptToken(jwtToken, validationParameters)), validationParameters);
                     jwtToken.InnerToken = innerToken;
-                    var innerTokenValidationResult = ValidateTokenPayload(innerToken, validationParametersCopy);
+                    jwtToken.PayloadClaimSet = innerToken.PayloadClaimSet;
+                    var innerTokenValidationResult = ValidateTokenPayload(innerToken, validationParameters);
                     return new TokenValidationResult
                     {
                         SecurityToken = jwtToken,
@@ -1007,8 +1020,20 @@ namespace Microsoft.IdentityModel.JsonWebTokens
                 }
                 else
                 {
-                    var jsonWebToken = ValidateSignature(token, validationParametersCopy);
-                    return ValidateTokenPayload(jsonWebToken, validationParametersCopy);
+                    if (validationParameters.SignatureValidator != null)
+                    {
+                        var validatedToken = validationParameters.SignatureValidator(token, validationParameters);
+                        if (validatedToken == null)
+                            throw LogHelper.LogExceptionMessage(new SecurityTokenInvalidSignatureException(LogHelper.FormatInvariant(TokenLogMessages.IDX10505, token)));
+
+                        var validatedJsonWebToken = validatedToken as JsonWebToken;
+                        if (validatedJsonWebToken == null)
+                            throw LogHelper.LogExceptionMessage(new SecurityTokenInvalidSignatureException(LogHelper.FormatInvariant(TokenLogMessages.IDX10506, typeof(JsonWebToken), validatedToken.GetType(), token)));
+
+                        return ValidateTokenPayload(validatedJsonWebToken, validationParameters);
+                    }
+
+                    return ValidateTokenPayload(ValidateSignature(jwtToken, validationParameters), validationParameters);
                 }
             }
             catch (Exception ex)
@@ -1023,17 +1048,16 @@ namespace Microsoft.IdentityModel.JsonWebTokens
 
         private TokenValidationResult ValidateTokenPayload(JsonWebToken jsonWebToken, TokenValidationParameters validationParameters)
         {
-            var expires = jsonWebToken.TryGetClaim(JwtRegisteredClaimNames.Exp, out var _) ? (DateTime?)jsonWebToken.ValidTo : null;
-            var notBefore = jsonWebToken.TryGetClaim(JwtRegisteredClaimNames.Nbf, out var _) ? (DateTime?)jsonWebToken.ValidFrom : null;
+            var expires = jsonWebToken.HasPayloadClaim(JwtRegisteredClaimNames.Exp) ? (DateTime?)jsonWebToken.ValidTo : null;
+            var notBefore = jsonWebToken.HasPayloadClaim(JwtRegisteredClaimNames.Nbf) ? (DateTime?)jsonWebToken.ValidFrom : null;
 
             Validators.ValidateLifetime(notBefore, expires, jsonWebToken, validationParameters);
             Validators.ValidateAudience(jsonWebToken.Audiences, jsonWebToken, validationParameters);
             var issuer = Validators.ValidateIssuer(jsonWebToken.Issuer, jsonWebToken, validationParameters);
             Validators.ValidateTokenReplay(expires, jsonWebToken.EncodedToken, validationParameters);
             if (validationParameters.ValidateActor && !string.IsNullOrWhiteSpace(jsonWebToken.Actor))
-            {
                 ValidateToken(jsonWebToken.Actor, validationParameters.ActorValidationParameters ?? validationParameters);
-            }
+
             Validators.ValidateIssuerSecurityKey(jsonWebToken.SigningKey, jsonWebToken, validationParameters);
             var type = Validators.ValidateTokenType(jsonWebToken.Typ, jsonWebToken, validationParameters);
 
@@ -1049,64 +1073,35 @@ namespace Microsoft.IdentityModel.JsonWebTokens
         /// <summary>
         /// Validates the JWT signature.
         /// </summary>
-        private static JsonWebToken ValidateSignature(string token, TokenValidationParameters validationParameters)
+        private static JsonWebToken ValidateSignature(JsonWebToken jwtToken, TokenValidationParameters validationParameters)
         {
-            if (string.IsNullOrWhiteSpace(token))
-                throw LogHelper.LogArgumentNullException(nameof(token));
-
-            if (validationParameters == null)
-                throw LogHelper.LogArgumentNullException(nameof(validationParameters));
-
-            if (validationParameters.SignatureValidator != null)
-            {
-                var validatedToken = validationParameters.SignatureValidator(token, validationParameters);
-                if (validatedToken == null)
-                    throw LogHelper.LogExceptionMessage(new SecurityTokenInvalidSignatureException(LogHelper.FormatInvariant(TokenLogMessages.IDX10505, token)));
-
-                var validatedJsonWebToken = validatedToken as JsonWebToken;
-                if (validatedJsonWebToken == null)
-                    throw LogHelper.LogExceptionMessage(new SecurityTokenInvalidSignatureException(LogHelper.FormatInvariant(TokenLogMessages.IDX10506, typeof(JsonWebToken), validatedToken.GetType(), token)));
-
-                return validatedJsonWebToken;
-            }
-
-            JsonWebToken jwtToken = null;
-
-            if (validationParameters.TokenReader != null)
-            {
-                var securityToken = validationParameters.TokenReader(token, validationParameters);
-                if (securityToken == null)
-                    throw LogHelper.LogExceptionMessage(new SecurityTokenInvalidSignatureException(LogHelper.FormatInvariant(TokenLogMessages.IDX10510, token)));
-
-                jwtToken = securityToken as JsonWebToken;
-                if (jwtToken == null)
-                    throw LogHelper.LogExceptionMessage(new SecurityTokenInvalidSignatureException(LogHelper.FormatInvariant(TokenLogMessages.IDX10509, typeof(JsonWebToken), securityToken.GetType(), token)));
-            }
-            else
-            {
-                jwtToken = new JsonWebToken(token);
-            }
-
-            var encodedBytes = Encoding.UTF8.GetBytes(jwtToken.EncodedHeader + "." + jwtToken.EncodedPayload);
-            if (string.IsNullOrEmpty(jwtToken.EncodedSignature))
+            if (!jwtToken.HasSignature)
             {
                 if (validationParameters.RequireSignedTokens)
-                    throw LogHelper.LogExceptionMessage(new SecurityTokenInvalidSignatureException(LogHelper.FormatInvariant(TokenLogMessages.IDX10504, token)));
+                    throw LogHelper.LogExceptionMessage(new SecurityTokenInvalidSignatureException(LogHelper.FormatInvariant(TokenLogMessages.IDX10504, jwtToken)));
                 else
                     return jwtToken;
             }
 
+            // TODO - if we match a key, first try that key, then try all the rest skipping the key needed.
             bool kidMatched = false;
             IEnumerable<SecurityKey> keys = null;
             if (validationParameters.IssuerSigningKeyResolver != null)
             {
-                keys = validationParameters.IssuerSigningKeyResolver(token, jwtToken, jwtToken.Kid, validationParameters);
+                keys = validationParameters.IssuerSigningKeyResolver(jwtToken.EncodedToken, jwtToken, jwtToken.Kid, validationParameters);
             }
             else
             {
                 var key = JwtTokenUtilities.ResolveTokenSigningKey(jwtToken.Kid, jwtToken.X5t, validationParameters);
                 if (key != null)
                 {
+                    if (ValidateSignature(jwtToken._hpUtf8Bytes, jwtToken._sBytes, key, jwtToken.Alg, jwtToken, validationParameters))
+                    {
+                        LogHelper.LogInformation(TokenLogMessages.IDX10242, jwtToken.EncodedToken);
+                        jwtToken.SigningKey = key;
+                        return jwtToken;
+                    }
+
                     kidMatched = true;
                     keys = new List<SecurityKey> { key };
                 }
@@ -1125,16 +1120,6 @@ namespace Microsoft.IdentityModel.JsonWebTokens
             var exceptionStrings = new StringBuilder();
             var keysAttempted = new StringBuilder();
             var kidExists = !string.IsNullOrEmpty(jwtToken.Kid);
-            byte[] signatureBytes;
-
-            try
-            {
-                signatureBytes = Base64UrlEncoder.DecodeBytes(jwtToken.EncodedSignature);
-            }
-            catch (FormatException e)
-            {
-                throw new SecurityTokenInvalidSignatureException(TokenLogMessages.IDX10508, e);
-            }
 
             if (keys != null)
             {
@@ -1142,9 +1127,9 @@ namespace Microsoft.IdentityModel.JsonWebTokens
                 {
                     try
                     {
-                        if (ValidateSignature(encodedBytes, signatureBytes, key, jwtToken.Alg, jwtToken, validationParameters))
+                        if (ValidateSignature(jwtToken._hpUtf8Bytes, jwtToken._sBytes, key, jwtToken.Alg, jwtToken, validationParameters))
                         {
-                            LogHelper.LogInformation(TokenLogMessages.IDX10242, token);
+                            LogHelper.LogInformation(TokenLogMessages.IDX10242, jwtToken.EncodedToken);
                             jwtToken.SigningKey = key;
                             return jwtToken;
                         }
@@ -1161,7 +1146,6 @@ namespace Microsoft.IdentityModel.JsonWebTokens
                             kidMatched = jwtToken.Kid.Equals(key.KeyId, key is X509SecurityKey ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
                     }
                 }
-
             }
 
             if (kidExists)
@@ -1169,9 +1153,8 @@ namespace Microsoft.IdentityModel.JsonWebTokens
                 if (kidMatched)
                     throw LogHelper.LogExceptionMessage(new SecurityTokenInvalidSignatureException(LogHelper.FormatInvariant(TokenLogMessages.IDX10511, keysAttempted, jwtToken.Kid, exceptionStrings, jwtToken)));
 
-                var expires = jwtToken.TryGetClaim(JwtRegisteredClaimNames.Exp, out var _) ? (DateTime?)jwtToken.ValidTo : null;
-                var notBefore = jwtToken.TryGetClaim(JwtRegisteredClaimNames.Nbf, out var _) ? (DateTime?)jwtToken.ValidFrom : null;
-
+                var expires = jwtToken.HasPayloadClaim(JwtRegisteredClaimNames.Exp) ? (DateTime?)jwtToken.ValidTo : null;
+                var notBefore = jwtToken.HasPayloadClaim(JwtRegisteredClaimNames.Nbf) ? (DateTime?)jwtToken.ValidFrom : null;
                 InternalValidators.ValidateLifetimeAndIssuerAfterSignatureNotValidatedJwt(
                     jwtToken,
                     notBefore,
