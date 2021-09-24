@@ -1005,10 +1005,10 @@ namespace Microsoft.IdentityModel.JsonWebTokens
             {
                 if (jwtToken.NumberOfSegments == JwtConstants.JweSegmentCount)
                 {
-                    var innerToken = ValidateSignature(new JsonWebToken(DecryptToken(jwtToken, validationParameters)), validationParameters);
+                    var innerToken = ValidateSignature(new JsonWebToken(DecryptToken(jwtToken, validationParameters)), validationParametersCopy);
                     jwtToken.InnerToken = innerToken;
-                    jwtToken.PayloadClaimSet = innerToken.PayloadClaimSet;
-                    var innerTokenValidationResult = ValidateTokenPayload(innerToken, validationParameters);
+                    jwtToken.Payload = innerToken.Payload;
+                    var innerTokenValidationResult = ValidateTokenPayload(innerToken, validationParametersCopy);
                     return new TokenValidationResult
                     {
                         SecurityToken = jwtToken,
@@ -1021,7 +1021,7 @@ namespace Microsoft.IdentityModel.JsonWebTokens
                 {
                     if (validationParameters.SignatureValidator != null)
                     {
-                        var validatedToken = validationParameters.SignatureValidator(token, validationParameters);
+                        var validatedToken = validationParameters.SignatureValidator(token, validationParametersCopy);
                         if (validatedToken == null)
                             throw LogHelper.LogExceptionMessage(new SecurityTokenInvalidSignatureException(LogHelper.FormatInvariant(TokenLogMessages.IDX10505, token)));
 
@@ -1029,10 +1029,10 @@ namespace Microsoft.IdentityModel.JsonWebTokens
                         if (validatedJsonWebToken == null)
                             throw LogHelper.LogExceptionMessage(new SecurityTokenInvalidSignatureException(LogHelper.FormatInvariant(TokenLogMessages.IDX10506, typeof(JsonWebToken), validatedToken.GetType(), token)));
 
-                        return ValidateTokenPayload(validatedJsonWebToken, validationParameters);
+                        return ValidateTokenPayload(validatedJsonWebToken, validationParametersCopy);
                     }
 
-                    return ValidateTokenPayload(ValidateSignature(jwtToken, validationParameters), validationParameters);
+                    return ValidateTokenPayload(ValidateSignature(jwtToken, validationParametersCopy), validationParametersCopy);
                 }
             }
             catch (Exception ex)

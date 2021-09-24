@@ -47,7 +47,6 @@ namespace Microsoft.IdentityModel.TestUtils
             CallContext = new CallContext
             {
                 CaptureLogs = true,
-                DebuggingId = testId
             };
 
             TestId = testId;
