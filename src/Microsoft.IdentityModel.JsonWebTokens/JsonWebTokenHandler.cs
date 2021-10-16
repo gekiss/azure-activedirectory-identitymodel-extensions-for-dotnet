@@ -1014,23 +1014,9 @@ namespace Microsoft.IdentityModel.JsonWebTokens
                 }
                 catch (Exception ex)
                 {
-                    // TODO: Get rid of this check and continue with validation regardless of the properties set on the TVP.
-                    // It's too hard to capture everything in this check, we should just fail later on in the validation process.
-
-                    // If either a signing key or a valid issuer was not provided through the TVP, we want to stop processing on configuration retrieval failure.
-                    // Otherwise, we should keep going with validation.
-                    if ((validationParametersCopy.ValidateIssuer && string.IsNullOrWhiteSpace(validationParametersCopy.ValidIssuer) && validationParametersCopy.ValidIssuers.IsNullOrEmpty() && validationParametersCopy.IssuerValidator == null
-                        && validationParametersCopy.TokenDecryptionKey == null && validationParametersCopy.TokenDecryptionKeys.IsNullOrEmpty() && validationParametersCopy.TokenDecryptionKeyResolver == null)
-                        || (validationParametersCopy.RequireSignedTokens && validationParametersCopy.IssuerSigningKey == null && validationParametersCopy.IssuerSigningKeys.IsNullOrEmpty() && validationParametersCopy.IssuerSigningKeyResolver == null))
-                    {
-                        return new TokenValidationResult
-                        {
-                            Exception = ex,
-                            IsValid = false
-                        };
-                    }
-
-                    LogHelper.LogInformation(LogHelper.FormatInvariant(TokenLogMessages.IDX10261, validationParametersCopy.ConfigurationManager.MetadataAddress));
+                    // Keep going with the validation as the TokenValidationParameters may have the issuer and signing key set
+                    // directly on them.
+                    LogHelper.LogInformation(LogHelper.FormatInvariant(TokenLogMessages.IDX10261, validationParametersCopy.ConfigurationManager.MetadataAddress, ex.ToString()));
                 }
             }
 
@@ -1071,7 +1057,7 @@ namespace Microsoft.IdentityModel.JsonWebTokens
                     // If we were still unable to validate, attempt to refresh the configuration and validate using it.
                     validationParametersCopy.ConfigurationManager.RequestRefresh();
                     var lastConfig = validationParametersCopy.Configuration;
-                    validationParametersCopy.Configuration = validationParametersCopy.ConfigurationManager.GetBaseConfigurationAsync(CancellationToken.None).Result;
+                    validationParametersCopy.Configuration = validationParametersCopy.ConfigurationManager.GetBaseConfigurationAsync(CancellationToken.None).GetAwaiter().GetResult();
 
                     // Only try to re-validate using the newly obtained config if it doesn't reference equal the previously used configuration.
                     if (lastConfig != validationParametersCopy.Configuration)

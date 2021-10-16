@@ -40,9 +40,9 @@ namespace Microsoft.IdentityModel.Tokens
     {
         private TimeSpan _automaticRefreshInterval = DefaultAutomaticRefreshInterval;
         private TimeSpan _refreshInterval = DefaultRefreshInterval;
-        private TimeSpan lastKnownGoodLifetime = DefaultLastKnownGoodConfigurationLifetime;
+        private TimeSpan _lastKnownGoodLifetime = DefaultLastKnownGoodConfigurationLifetime;
         private BaseConfiguration _lastKnownGoodConfiguration;
-        private DateTime _lastKnownGoodConfigFirstUse = DateTime.MinValue;
+        private DateTime? _lastKnownGoodConfigFirstUse = null;
 
         /// <summary>
         /// Gets or sets the <see cref="TimeSpan"/> that controls how often an automatic metadata refresh should occur.
@@ -90,12 +90,15 @@ namespace Microsoft.IdentityModel.Tokens
             get
             {
                 // only set this value the first time the last known good configuration is used for validation
-                if (_lastKnownGoodConfigFirstUse.Equals(DateTime.MinValue)) _lastKnownGoodConfigFirstUse = DateTime.UtcNow;
+                if (_lastKnownGoodConfigFirstUse == null)
+                    _lastKnownGoodConfigFirstUse = DateTime.UtcNow;
+
                 return _lastKnownGoodConfiguration;
             }
             set
             {
-                _lastKnownGoodConfiguration = value != null ? value : throw LogHelper.LogArgumentNullException(nameof(value));
+                _lastKnownGoodConfiguration = value ?? throw LogHelper.LogArgumentNullException(nameof(value));
+                _lastKnownGoodConfigFirstUse = null; // reset this value as a new last known good configuration was set (and has not been used yet)
             }
         }
 
@@ -104,13 +107,13 @@ namespace Microsoft.IdentityModel.Tokens
         /// </summary>
         public TimeSpan LastKnownGoodLifetime
         {
-            get { return lastKnownGoodLifetime; }
+            get { return _lastKnownGoodLifetime; }
             set
             {
                 if (value < TimeSpan.Zero)
                     throw LogHelper.LogExceptionMessage(new ArgumentOutOfRangeException(nameof(value), LogHelper.FormatInvariant(LogMessages.IDX10110, value)));
 
-                lastKnownGoodLifetime = value;
+                _lastKnownGoodLifetime = value;
             }
         }
 
@@ -152,7 +155,9 @@ namespace Microsoft.IdentityModel.Tokens
         /// <summary>
         /// Indicates whether the last known good configuration is still fresh, depends on when the LKG was first used and it's lifetime.
         /// </summary>
-        public bool IsLastKnownGoodValid => LastKnownGoodConfiguration != null && DateTime.UtcNow < _lastKnownGoodConfigFirstUse + LastKnownGoodLifetime;
+        // The _lastKnownGoodConfiguration private variable is accessed rather than the property (LastKnownGoodConfiguration) as we do not want this access
+        // to trigger a change in _lastKnownGoodConfigFirstUse.
+        public bool IsLastKnownGoodValid => _lastKnownGoodConfiguration != null && (_lastKnownGoodConfigFirstUse == null || DateTime.UtcNow < _lastKnownGoodConfigFirstUse + LastKnownGoodLifetime);
 
         /// <summary>
         /// Indicate that the configuration may be stale (as indicated by failing to process incoming tokens).
