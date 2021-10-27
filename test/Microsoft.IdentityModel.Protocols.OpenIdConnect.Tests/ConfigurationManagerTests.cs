@@ -31,6 +31,7 @@ using System.IO;
 using System.Reflection;
 using System.Threading;
 using Microsoft.IdentityModel.TestUtils;
+using Microsoft.IdentityModel.Tokens;
 using Xunit;
 
 #pragma warning disable CS3016 // Arrays as attribute arguments is not CLS-compliant
@@ -296,6 +297,41 @@ namespace Microsoft.IdentityModel.Protocols.OpenIdConnect.Tests
             IdentityComparer.AreEqual(configuration, configuration2, context);
             if (!object.ReferenceEquals(configuration, configuration2))
                 context.Diffs.Add("!object.ReferenceEquals(configuration, configuration2)");
+
+            TestUtilities.AssertFailIfErrors(context);
+        }
+
+        // Test checks to make sure that the LastKnownGood (LKG) Configuration lifetime is properly reset at the time
+        // a new LKG is set.
+        [Fact]
+        public void ResetLastKnownGoodLifetime()
+        {
+            TestUtilities.WriteHeader($"{this}.ResetLastKnownGoodLifetime");
+            var context = new CompareContext();
+
+            var validConfig = new OpenIdConnectConfiguration() { TokenEndpoint = Default.Issuer + "oauth/token", Issuer = Default.Issuer };
+            var configurationManager = new MockConfigurationManager<OpenIdConnectConfiguration>(validConfig);
+
+            // set and retrieve config in order to set the first access time
+            configurationManager.LastKnownGoodConfiguration = validConfig;
+            var lkg = configurationManager.LastKnownGoodConfiguration;
+            var lkgConfigFirstUseField = typeof(BaseConfigurationManager).GetField("_lastKnownGoodConfigFirstUse", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            var lkgConfigFirstUse1 = lkgConfigFirstUseField.GetValue(configurationManager as BaseConfigurationManager);
+
+            // set and retrieve config again to reset first access time
+            configurationManager.LastKnownGoodConfiguration = validConfig;
+            lkg = configurationManager.LastKnownGoodConfiguration;
+            var lkgConfigFirstUse2 = lkgConfigFirstUseField.GetValue(configurationManager as BaseConfigurationManager);
+
+            if (lkgConfigFirstUse1 == null)
+                context.AddDiff("Last known good first use time was not properly set for the first configuration.");
+
+            if (lkgConfigFirstUse1 == null)
+                context.AddDiff("Last known good first use time was not properly set for the second configuration.");
+
+            //LKG config first use was not reset when a new configuration was set
+            if (lkgConfigFirstUse1 == lkgConfigFirstUse2)
+                context.AddDiff("Last known good first use time was not reset when a new LKG configuration was set.");
 
             TestUtilities.AssertFailIfErrors(context);
         }
