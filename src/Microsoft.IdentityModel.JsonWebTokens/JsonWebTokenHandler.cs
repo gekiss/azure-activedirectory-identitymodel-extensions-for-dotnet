@@ -1035,7 +1035,9 @@ namespace Microsoft.IdentityModel.JsonWebTokens
                 else if (tokenValidationResult.Exception.GetType().Equals(typeof(SecurityTokenInvalidSignatureException))
                    || tokenValidationResult.Exception.GetType().Equals(typeof(SecurityTokenInvalidSigningKeyException))
                    || tokenValidationResult.Exception.GetType().Equals(typeof(SecurityTokenInvalidIssuerException))
-                   || tokenValidationResult.Exception.GetType().Equals(typeof(SecurityTokenUnableToValidateException))
+                   || (tokenValidationResult.Exception.GetType().Equals(typeof(SecurityTokenUnableToValidateException))
+                   // we should not try to revalidate with the LKG or request a refresh if the token has an invalid lifetime
+                   && (tokenValidationResult.Exception as SecurityTokenUnableToValidateException).ValidationFailure != ValidationFailure.InvalidLifetime)
                    || tokenValidationResult.Exception.GetType().Equals(typeof(SecurityTokenSignatureKeyNotFoundException)))
                 {
                     if (validationParametersCopy.ConfigurationManager.UseLastKnownGoodConfiguration

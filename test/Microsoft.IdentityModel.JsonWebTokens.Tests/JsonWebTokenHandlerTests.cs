@@ -2758,6 +2758,11 @@ namespace Microsoft.IdentityModel.JsonWebTokens.Tests
                 var incorrectSigningKeysConfigWithMatchingKid = new OpenIdConnectConfiguration() { TokenEndpoint = Default.Issuer + "oauth/token", Issuer = Default.Issuer };
                 incorrectSigningKeysConfigWithMatchingKid.SigningKeys.Add(KeyingMaterial.CreateJsonWebKeyEC(JsonWebKeyECTypes.P256, Default.X509AsymmetricSigningCredentials.Key.KeyId, KeyingMaterial.P256_D, KeyingMaterial.P256_X, KeyingMaterial.P256_Y));
 
+                var expiredSecurityTokenDescriptor = Default.X509SecurityTokenDescriptor(Default.X509AsymmetricSigningCredentials);
+                expiredSecurityTokenDescriptor.NotBefore = DateTime.UtcNow + TimeSpan.FromDays(1);
+                expiredSecurityTokenDescriptor.Expires = DateTime.UtcNow + TimeSpan.FromDays(2);
+                var expiredJws = Default.Jwt(expiredSecurityTokenDescriptor);
+
                 return new TheoryData<JwtTheoryData>
                 {
                     new JwtTheoryData
@@ -2972,13 +2977,28 @@ namespace Microsoft.IdentityModel.JsonWebTokens.Tests
                         Token = Default.AsymmetricJws,
                         ValidationParameters = new TokenValidationParameters
                         {
-                            ConfigurationManager = new MockConfigurationManager<OpenIdConnectConfiguration>(incorrectSigningKeysConfig, validConfig, validConfig) {UseLastKnownGoodConfiguration = false },
+                            ConfigurationManager = new MockConfigurationManager<OpenIdConnectConfiguration>(incorrectSigningKeysConfig, validConfig, validConfig) { UseLastKnownGoodConfiguration = false },
                             ValidateIssuerSigningKey = true,
                             RequireSignedTokens = true,
                             ValidateIssuer = true,
                             ValidateAudience = false,
                             ValidateLifetime = false,
                         },
+                    },
+                    new JwtTheoryData
+                    {
+                        TestId = nameof(expiredJws) + "_" + "ConfigKeyInvalid" + "_" + "LKGValid" + "_TokenNotYetValid",
+                        Token = expiredJws,
+                        ValidationParameters = new TokenValidationParameters
+                        {
+                            ConfigurationManager = new MockConfigurationManager<OpenIdConnectConfiguration>(incorrectSigningKeysConfig, validConfig, validConfig) { UseLastKnownGoodConfiguration = true },
+                            ValidateIssuerSigningKey = true,
+                            RequireSignedTokens = true,
+                            ValidateIssuer = true,
+                            ValidateAudience = false,
+                            ValidateLifetime = true,
+                        },
+                        ExpectedException = new ExpectedException(typeof(SecurityTokenUnableToValidateException))
                     }
                 };
             }
@@ -3035,6 +3055,14 @@ namespace Microsoft.IdentityModel.JsonWebTokens.Tests
 
                 var incorrectSigningKeysConfigWithMatchingKid = new OpenIdConnectConfiguration() { TokenEndpoint = Default.Issuer + "oauth/token", Issuer = Default.Issuer };
                 incorrectSigningKeysConfigWithMatchingKid.SigningKeys.Add(new SymmetricSecurityKey(KeyingMaterial.DefaultSymmetricSecurityKey_128.Key) { KeyId = KeyingMaterial.DefaultSymmetricSecurityKey_256.KeyId });
+
+                var notYetValidSecurityTokenDescriptor = Default.X509SecurityTokenDescriptor(Default.SymmetricEncryptingCredentials, Default.X509AsymmetricSigningCredentials, null);
+                notYetValidSecurityTokenDescriptor.NotBefore = DateTime.UtcNow + TimeSpan.FromDays(1);
+                notYetValidSecurityTokenDescriptor.Expires = DateTime.UtcNow + TimeSpan.FromDays(2);
+                var notYetValidJwe = Default.Jwt(notYetValidSecurityTokenDescriptor);
+                var notYetValidJweConfig = new OpenIdConnectConfiguration() { TokenEndpoint = Default.Issuer + "oauth/token", Issuer = Default.Issuer };
+                notYetValidJweConfig.SigningKeys.Add(Default.X509AsymmetricSigningCredentials.Key);
+   
                 return new TheoryData<JwtTheoryData>
                 {
                     new JwtTheoryData
@@ -3268,6 +3296,22 @@ namespace Microsoft.IdentityModel.JsonWebTokens.Tests
                             ValidateLifetime = false,
                             TokenDecryptionKey = KeyingMaterial.DefaultSymmetricEncryptingCreds_Aes128_Sha2.Key
                         },
+                    },
+                    new JwtTheoryData
+                    {
+                        TestId = nameof(notYetValidJwe) + "_" + "ConfigKeyInvalid" + "_" + "LKGValid" + "_TokenNotYetValid",
+                        Token = notYetValidJwe,
+                        ValidationParameters = new TokenValidationParameters
+                        {
+                            ConfigurationManager = new MockConfigurationManager<OpenIdConnectConfiguration>(incorrectSigningKeysConfig, notYetValidJweConfig, notYetValidJweConfig) { UseLastKnownGoodConfiguration = true },
+                            ValidateIssuerSigningKey = true,
+                            RequireSignedTokens = true,
+                            ValidateIssuer = true,
+                            ValidateAudience = false,
+                            ValidateLifetime = true,
+                            TokenDecryptionKey = Default.SymmetricEncryptingCredentials.Key
+                        },
+                        ExpectedException = new ExpectedException(typeof(SecurityTokenUnableToValidateException))
                     }
                 };
             }
