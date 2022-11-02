@@ -28,7 +28,9 @@
 using System;
 using System.Xml;
 using Microsoft.IdentityModel.Logging;
+using Microsoft.IdentityModel.Protocols.WsFed;
 using Microsoft.IdentityModel.Protocols.WsFederation;
+using Microsoft.IdentityModel.Protocols.WsIdentity;
 using Microsoft.IdentityModel.Protocols.WsTrust;
 
 namespace Microsoft.IdentityModel.TestUtils
@@ -93,6 +95,32 @@ namespace Microsoft.IdentityModel.TestUtils
                 trustConstants.Namespace,
                 created,
                 expires));
+        }
+
+        #endregion
+
+        #region Claims
+
+        public static XmlDictionaryReader GetClaimsReader(WsTrustConstants trustConstants, WsFedConstants fedConstants)
+        {
+            return XmlUtilities.CreateDictionaryReader(
+                LogHelper.FormatInvariant(
+                @"<{0}:Claims xmlns:{0}=""{1}"" Dialect=""http://schemas.xmlsoap.org/ws/2006/12/authorization/authclaims""><{2}:ClaimType Uri=""http://docs.oasis-open.org/wsfed/authorization/200706/claims/action"" Optional=""true"" xmlns:{2}=""{3}""><{2}:Value>MSExchange.SharingCalendarFreeBusy</{2}:Value></{2}:ClaimType></{0}:Claims>",
+                trustConstants.Prefix,
+                trustConstants.Namespace,
+                fedConstants.AuthPrefix,
+                fedConstants.AuthNamespace));
+        }
+
+        public static XmlDictionaryReader GetClaimsReader(WsTrustConstants trustConstants, WsIdentityConstants identityConstants)
+        {
+            return XmlUtilities.CreateDictionaryReader(
+                LogHelper.FormatInvariant(
+                @"<{0}:Claims xmlns:{0}=""{1}"" Dialect=""{3}""><{2}:ClaimType Uri=""http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"" Optional=""true"" xmlns:{2}=""{3}""/><{2}:ClaimType Uri=""http://schemas.microsoft.com/ws/2008/06/identity/claims/role"" xmlns:{2}=""{3}""></{2}:ClaimType></{0}:Claims>",
+                trustConstants.Prefix,
+                trustConstants.Namespace,
+                identityConstants.Prefix,
+                identityConstants.Namespace));
         }
 
         #endregion

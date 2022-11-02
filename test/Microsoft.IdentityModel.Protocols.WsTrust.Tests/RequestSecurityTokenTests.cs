@@ -86,6 +86,11 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust.Tests
                             Name = "http://schemas.microsoft.com/wlid/requestor",
                             Scope = "http://schemas.xmlsoap.org/ws/2006/12/authorization/ctx/requestor",
                             Value = "outlook.com"
+                        },
+                        new ContextItem
+                        {
+                            Name = "http://schemas.microsoft.com/wlid/requestor",
+                            Value = "outlook.com"
                         }
                     });
 
@@ -170,6 +175,9 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust.Tests
                     //    </t:OnBehalfOf>
                     //    <auth:AdditionalContext>
                     //        <auth:ContextItem Scope="http://schemas.xmlsoap.org/ws/2006/12/authorization/ctx/requestor" Name="http://schemas.microsoft.com/wlid/requestor">
+                    //            <auth:Value>outlook.com</auth:Value>
+                    //        </auth:ContextItem>
+                    //        <auth:ContextItem Name="http://schemas.microsoft.com/wlid/requestor">
                     //            <auth:Value>outlook.com</auth:Value>
                     //        </auth:ContextItem>
                     //    </auth:AdditionalContext>
