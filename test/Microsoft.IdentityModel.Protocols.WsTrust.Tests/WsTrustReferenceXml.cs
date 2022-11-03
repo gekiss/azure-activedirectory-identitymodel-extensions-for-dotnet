@@ -30,6 +30,8 @@
 using System;
 using System.Xml;
 using Microsoft.IdentityModel.Logging;
+using Microsoft.IdentityModel.Protocols.WsFed;
+using Microsoft.IdentityModel.Protocols.WsIdentity;
 using Microsoft.IdentityModel.Protocols.WsUtility;
 using Microsoft.IdentityModel.TestUtils;
 
@@ -150,7 +152,6 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust.Tests
 
         #endregion
 
-
         #region RequestSecurityTokenResponseCollection
         public static string GetRequestSecurityTokenResponseCollection(WsTrustConstants trustConstants, string token, bool includeNamespace = true)
         {
@@ -175,6 +176,34 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust.Tests
         public static XmlDictionaryReader GetRequestSecurityTokenResponseCollectionReader(WsTrustConstants trustConstants, string token, bool includeNamespace = true)
         {
             return XmlUtilities.CreateDictionaryReader(GetRequestSecurityTokenResponseCollection(trustConstants, token, includeNamespace));
+        }
+
+        #endregion
+
+        #region Claims
+
+        public static XmlDictionaryReader GetClaimsReader(WsTrustConstants trustConstants, WsFedConstants fedConstants) {
+            return XmlUtilities.CreateDictionaryReader(
+                LogHelper.FormatInvariant(
+                @"<{0}:{4} xmlns:{0}=""{1}"" Dialect=""http://schemas.xmlsoap.org/ws/2006/12/authorization/authclaims""><{2}:{5} Uri=""http://docs.oasis-open.org/wsfed/authorization/200706/claims/action"" Optional=""true"" xmlns:{2}=""{3}""><{2}:Value>MSExchange.SharingCalendarFreeBusy</{2}:Value></{2}:{5}><{2}:{5} Uri=""http://someclaim"" xmlns:{2}=""{3}""/><{2}:{5} Uri=""http://someclaim2"" xmlns:{2}=""{3}""><{2}:DisplayValue>Some display value</{2}:DisplayValue></{2}:{5}></{0}:{4}>",
+                trustConstants.Prefix,
+                trustConstants.Namespace,
+                fedConstants.AuthPrefix,
+                fedConstants.AuthNamespace,
+                WsFedElements.Claims,
+                WsFedElements.ClaimType));
+        }
+
+        public static XmlDictionaryReader GetClaimsReader(WsTrustConstants trustConstants, WsIdentityConstants identityConstants) {
+            return XmlUtilities.CreateDictionaryReader(
+                LogHelper.FormatInvariant(
+                @"<{0}:{4} xmlns:{0}=""{1}"" Dialect=""{3}""><{2}:{5} Uri=""http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"" Optional=""true"" xmlns:{2}=""{3}""/><{2}:{5} Uri=""http://schemas.microsoft.com/ws/2008/06/identity/claims/role"" xmlns:{2}=""{3}""></{2}:{5}></{0}:{4}>",
+                trustConstants.Prefix,
+                trustConstants.Namespace,
+                identityConstants.Prefix,
+                identityConstants.Namespace,
+                WsFedElements.Claims,
+                WsIdentityElements.ClaimType));
         }
 
         #endregion

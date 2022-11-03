@@ -27,6 +27,7 @@
 
 using Microsoft.IdentityModel.Protocols.WsAddressing;
 using Microsoft.IdentityModel.Protocols.WsFed;
+using Microsoft.IdentityModel.Protocols.WsIdentity;
 using Microsoft.IdentityModel.Protocols.WsPolicy;
 using Microsoft.IdentityModel.Protocols.WsSecurity;
 using Microsoft.IdentityModel.Protocols.WsTrust;
@@ -51,6 +52,7 @@ namespace Microsoft.IdentityModel.Protocols
             {
                 AddressingConstants = WsAddressingConstants.Addressing10;
                 FedConstants = WsFedConstants.Fed12;
+                IdentityConstants = WsIdentityConstants.Identity10;
                 PolicyConstants = WsPolicyConstants.Policy12;
                 SecurityConstants = WsSecurityConstants.WsSecurity10;
                 TrustActions = WsTrustActions.TrustFeb2005;
@@ -61,6 +63,7 @@ namespace Microsoft.IdentityModel.Protocols
             {
                 AddressingConstants = WsAddressingConstants.Addressing10;
                 FedConstants = WsFedConstants.Fed12;
+                IdentityConstants = WsIdentityConstants.Identity10;
                 PolicyConstants = WsPolicyConstants.Policy12;
                 SecurityConstants = WsSecurityConstants.WsSecurity11;
                 TrustActions = WsTrustActions.Trust13;
@@ -71,6 +74,7 @@ namespace Microsoft.IdentityModel.Protocols
             {
                 AddressingConstants = WsAddressingConstants.Addressing10;
                 FedConstants = WsFedConstants.Fed12;
+                IdentityConstants = WsIdentityConstants.Identity10;
                 PolicyConstants = WsPolicyConstants.Policy12;
                 SecurityConstants = WsSecurityConstants.WsSecurity11;
                 TrustActions = WsTrustActions.Trust14;
@@ -88,7 +92,12 @@ namespace Microsoft.IdentityModel.Protocols
         /// Gets the <see cref="WsFedConstants"/> associated with the <see cref="WsTrustVersion"/> passed to constructor.
         /// </summary>
         public WsFedConstants FedConstants { get; }
-       
+
+        /// <summary>
+        /// Gets the <see cref="WsIdentityConstants"/> associated with the <see cref="WsTrustVersion"/> passed to constructor.
+        /// </summary>
+        public WsIdentityConstants IdentityConstants { get; }
+
         /// <summary>
         /// Gets the <see cref="WsPolicyConstants"/> associated with the <see cref="WsTrustVersion"/> passed to constructor.
         /// </summary>

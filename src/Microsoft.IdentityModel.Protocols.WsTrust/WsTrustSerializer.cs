@@ -35,6 +35,7 @@ using System.Text;
 using System.Xml;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.IdentityModel.Protocols.WsFed;
+using Microsoft.IdentityModel.Protocols.WsIdentity;
 using Microsoft.IdentityModel.Protocols.WsPolicy;
 using Microsoft.IdentityModel.Protocols.WsSecurity;
 using Microsoft.IdentityModel.Protocols.WsUtility;
@@ -59,6 +60,7 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust
         private static Type _xmlTokenStreamType;
 
         private readonly WsFedSerializer _wsFedSerializer = new WsFedSerializer();
+        private readonly WsIdentitySerializer _wsIdentitySerializer = new WsIdentitySerializer();
         private readonly WsPolicySerializer _wsPolicySerializer = new WsPolicySerializer();
 
         internal const string GeneratedDateTimeFormat = "yyyy-MM-ddTHH:mm:ss.fffffZ";
@@ -159,7 +161,10 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust
                 {
                     if (reader.IsLocalName(WsFedElements.ClaimType))
                     {
-                        claimTypes.Add(_wsFedSerializer.ReadClaimType(reader, serializationContext.FedConstants.AuthNamespace));
+                        if (StringComparer.Ordinal.Equals(serializationContext.IdentityConstants.Namespace, dialect))
+                            claimTypes.Add(_wsIdentitySerializer.ReadClaimType(reader, serializationContext.IdentityConstants.Namespace));
+                        else
+                            claimTypes.Add(_wsFedSerializer.ReadClaimType(reader, serializationContext.FedConstants.AuthNamespace));
                     }
                     else
                     {
@@ -1015,11 +1020,22 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust
             try
             {
                 writer.WriteStartElement(serializationContext.TrustConstants.Prefix, WsTrustElements.Claims, serializationContext.TrustConstants.Namespace);
-                if (!string.IsNullOrEmpty(claims.Dialect))
-                    writer.WriteAttributeString(WsTrustAttributes.Dialect, claims.Dialect);
 
-                foreach (ClaimType claimType in claims.ClaimTypes)
-                    WsFedSerializer.WriteClaimType(writer, serializationContext, claimType);
+                if (StringComparer.Ordinal.Equals(claims.Dialect, serializationContext.IdentityConstants.Namespace))
+                {
+                    writer.WriteAttributeString(WsTrustAttributes.Dialect, serializationContext.IdentityConstants.Namespace);
+
+                    foreach (ClaimType claimType in claims.ClaimTypes)
+                        WsIdentitySerializer.WriteClaimType(writer, serializationContext, claimType);
+                }
+                else
+                {
+                    if (!string.IsNullOrEmpty(claims.Dialect))
+                        writer.WriteAttributeString(WsTrustAttributes.Dialect, claims.Dialect);
+
+                    foreach (ClaimType claimType in claims.ClaimTypes)
+                        WsFedSerializer.WriteClaimType(writer, serializationContext, claimType);
+                }
 
                 writer.WriteEndElement();
             }
@@ -1536,8 +1552,15 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust
                 }
                 else if (requestedSecurityToken.SecurityToken != null)
                 {
-                    foreach (SecurityTokenHandler tokenHandler in SecurityTokenHandlers)
-                    {
+                    bool tryWriteSucceeded = false;
+                    if (requestedSecurityToken.SecurityToken is Saml2SecurityToken saml2SecurityToken)
+                        tryWriteSucceeded = TryWriteSourceData(writer, saml2SecurityToken.Assertion, _saml2AssertionType);
+                    else if (requestedSecurityToken.SecurityToken is SamlSecurityToken samlSecurityToken)
+                        tryWriteSucceeded = TryWriteSourceData(writer, samlSecurityToken.Assertion, _samlAssertionType);
+
+                    if (!tryWriteSucceeded)
+                        foreach (SecurityTokenHandler tokenHandler in SecurityTokenHandlers)
+                        {
                         //if (tokenHandler.CreateSecurityTokenReference(.CanWriteSecurityToken(requestedSecurityToken.SecurityToken))
                         //{
                         //    if (!tokenHandler.TryWriteSourceData(writer, requestedSecurityToken.SecurityToken))
@@ -1545,7 +1568,7 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust
 
                         //    break;
                         //}
-                    }
+                        }
                 }
 
                 writer.WriteEndElement();

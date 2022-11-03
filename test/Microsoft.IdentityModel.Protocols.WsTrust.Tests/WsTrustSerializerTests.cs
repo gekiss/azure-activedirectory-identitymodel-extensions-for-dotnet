@@ -31,6 +31,7 @@ using System.IO;
 using System.Text;
 using System.Xml;
 using Microsoft.IdentityModel.Protocols.WsFed;
+using Microsoft.IdentityModel.Protocols.WsIdentity;
 using Microsoft.IdentityModel.Protocols.WsSecurity;
 using Microsoft.IdentityModel.TestUtils;
 using Microsoft.IdentityModel.Xml;
@@ -155,6 +156,16 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust.Tests
         {
             get
             {
+                var identityClaims = new Claims("http://schemas.xmlsoap.org/ws/2005/05/identity", new List<ClaimType>() {
+                    { new ClaimType() { Uri = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier", IsOptional = true } },
+                    { new ClaimType() { Uri = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role", IsOptional = null } },
+                });
+                var federationClaims = new Claims("http://schemas.xmlsoap.org/ws/2006/12/authorization/authclaims", new List<ClaimType>() {
+                    { new ClaimType() { Uri = "http://docs.oasis-open.org/wsfed/authorization/200706/claims/action", IsOptional = true, Value = "MSExchange.SharingCalendarFreeBusy" } },
+                    { new ClaimType() { Uri = "http://someclaim", IsOptional = null } },
+                    { new ClaimType() { Uri = "http://someclaim2" } },
+                });
+
                 var theoryData = new TheoryData<WsTrustTheoryData>
                 {
                     new WsTrustTheoryData(WsTrustReferenceXml.RandomElementReader)
@@ -175,7 +186,38 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust.Tests
                         ExpectedException = ExpectedException.XmlReadException(),
                         Reader = WsTrustReferenceXml.RandomElementReader,
                         TestId = "ReaderNotOnCorrectElement",
-                    }
+                    },
+                    new WsTrustTheoryData(WsTrustVersion.Trust13)
+                    {
+                        Claims = federationClaims,
+                        Reader = WsTrustReferenceXml.GetClaimsReader(WsTrustConstants.Trust13, WsFedConstants.Fed12),
+                        TestId = "Trust13_Fed12"
+                    },
+                    new WsTrustTheoryData(WsTrustVersion.TrustFeb2005)
+                    {
+                        Claims = federationClaims,
+                        Reader = WsTrustReferenceXml.GetClaimsReader(WsTrustConstants.TrustFeb2005, WsFedConstants.Fed12),
+                        TestId = "TrustFeb2005_Fed12"
+                    },
+                    new WsTrustTheoryData(WsTrustVersion.Trust13)
+                    {
+                        ExpectedException = ExpectedException.XmlReadException("IDX15011:"),
+                        Claims = federationClaims,
+                        Reader = WsTrustReferenceXml.GetClaimsReader(WsTrustConstants.Trust14, WsFedConstants.Fed12),
+                        TestId = "Trust14_13_Fed12"
+                    },
+                    new WsTrustTheoryData(WsTrustVersion.Trust13)
+                    {
+                        Claims = identityClaims,
+                        Reader = WsTrustReferenceXml.GetClaimsReader(WsTrustConstants.Trust13, WsIdentityConstants.Identity10),
+                        TestId = "Trust13_Identity10"
+                    },
+                    new WsTrustTheoryData(WsTrustVersion.TrustFeb2005)
+                    {
+                        Claims = identityClaims,
+                        Reader = WsTrustReferenceXml.GetClaimsReader(WsTrustConstants.TrustFeb2005, WsIdentityConstants.Identity10),
+                        TestId = "TrustFeb2005_Identity10"
+                    },
                 };
 
                 return theoryData;
@@ -556,6 +598,8 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust.Tests
             try
             {
                 WsTrustSerializer.WriteClaims(theoryData.Writer, theoryData.WsSerializationContext, theoryData.Claims);
+                theoryData.Writer.Flush();
+                var xml = Encoding.UTF8.GetString(theoryData.MemoryStream.ToArray());
                 //IdentityComparer.AreEqual(claims, theoryData.Claims, context);
             }
             catch (Exception ex)
@@ -570,6 +614,14 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust.Tests
         {
             get
             {
+                var identityClaims = new Claims("http://schemas.xmlsoap.org/ws/2005/05/identity", new List<ClaimType>() {
+                    { new ClaimType() { Uri = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier", IsOptional = true } },
+                    { new ClaimType() { Uri = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role", IsOptional = null } },
+                });
+                var federationClaims = new Claims("http://schemas.xmlsoap.org/ws/2006/12/authorization/authclaims", new List<ClaimType>() {
+                    { new ClaimType() { Uri = "http://docs.oasis-open.org/wsfed/authorization/200706/claims/action", IsOptional = true, Value = "MSExchange.SharingCalendarFreeBusy" } },
+                });
+
                 return new TheoryData<WsTrustTheoryData>
                 {
                     new WsTrustTheoryData(new MemoryStream())
@@ -589,7 +641,27 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust.Tests
                     {
                         ExpectedException = ExpectedException.ArgumentNullException("claims"),
                         TestId = "ClaimsNull"
-                    }
+                    },
+                    new WsTrustTheoryData(new MemoryStream(), WsTrustVersion.Trust13)
+                    {
+                        Claims = federationClaims,
+                        TestId = "Trust13_Fed12"
+                    },
+                    new WsTrustTheoryData(new MemoryStream(), WsTrustVersion.TrustFeb2005)
+                    {
+                        Claims = federationClaims,
+                        TestId = "TrustFeb2005_Fed12"
+                    },
+                    new WsTrustTheoryData(new MemoryStream(), WsTrustVersion.Trust13)
+                    {
+                        Claims = identityClaims,
+                        TestId = "Trust13_Identity10"
+                    },
+                    new WsTrustTheoryData(new MemoryStream(), WsTrustVersion.TrustFeb2005)
+                    {
+                        Claims = identityClaims,
+                        TestId = "TrustFeb2005_Identity10"
+                    },
                 };
             }
         }
