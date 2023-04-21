@@ -208,6 +208,64 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust.Tests
 
         #endregion
 
+        #region OnBehalfOf
+
+        public static string GetOnBehalfOfSecurityToken(WsTrustConstants trustConstants, string token, bool includeNamespace = true)
+        {
+
+            if (includeNamespace)
+                return LogHelper.FormatInvariant(
+                     @"<{0}:{3} xmlns:{0}=""{1}"">{2}</{0}:{3}>",
+                        trustConstants.Prefix,
+                        trustConstants.Namespace,
+                        token,
+                        WsTrustElements.OnBehalfOf);
+            else
+                return LogHelper.FormatInvariant(
+                     @"<{0}:{2} >{1}</{0}:{2}>",
+                     trustConstants.Prefix,
+                     token,
+                     WsTrustElements.OnBehalfOf);
+
+        }
+
+        public static XmlDictionaryReader GetOnBehalfOfSecurityTokenReader(WsTrustConstants trustConstants, string token, bool includeNamespace = true)
+        {
+            return XmlUtilities.CreateDictionaryReader(GetOnBehalfOfSecurityToken(trustConstants, token, includeNamespace));
+        }
+
+        #endregion
+
+        #region ActAs
+
+        public static string GetActAsSecurityToken(string token, bool includeNamespace = true)
+        {
+            WsTrustConstants trustConstants = WsTrustConstants.Trust14;
+
+            if (includeNamespace)
+                return LogHelper.FormatInvariant(
+                     @"<{0}:{3} xmlns:{0}=""{1}"">{2}</{0}:{3}>",
+                        trustConstants.Prefix,
+                        trustConstants.Namespace,
+                        token,
+                        WsTrustElements.ActAs);
+            else
+                return LogHelper.FormatInvariant(
+                     @"<{0}:{2} >{1}</{0}:{2}>",
+                     trustConstants.Prefix,
+                     token,
+                     WsTrustElements.ActAs);
+
+        }
+
+        public static XmlDictionaryReader GetActAsSecurityTokenReader(string token, bool includeNamespace = true)
+        {
+            return XmlUtilities.CreateDictionaryReader(GetActAsSecurityToken(token, includeNamespace));
+        }
+
+        #endregion
+
+
         public static XmlDictionaryReader RandomElementReader => XmlUtilities.CreateDictionaryReader(@"<z:SomeRandomElement xmlns:z=""http://some.random.namespace.xsd"" >SomeRamdonValue</z:SomeRandomElement>");
 
         public static string WTrustResponseSaml2

@@ -34,6 +34,7 @@ using Microsoft.IdentityModel.Protocols.WsFed;
 using Microsoft.IdentityModel.Protocols.WsIdentity;
 using Microsoft.IdentityModel.Protocols.WsSecurity;
 using Microsoft.IdentityModel.TestUtils;
+using Microsoft.IdentityModel.Tokens.Saml2;
 using Microsoft.IdentityModel.Xml;
 using Xunit;
 
@@ -335,6 +336,9 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust.Tests
         {
             get
             {
+                var saml2TokenHandler = new Saml2SecurityTokenHandler();
+                var saml2Token = saml2TokenHandler.ReadToken(ReferenceXml.Saml2Valid);
+
                 var theoryData = new TheoryData<WsTrustTheoryData>
                 {
                     new WsTrustTheoryData(WsTrustReferenceXml.RandomElementReader)
@@ -356,6 +360,76 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust.Tests
                         ExpectedException = ExpectedException.XmlReadException(),
                         Reader = WsTrustReferenceXml.RandomElementReader,
                         TestId = "ReaderNotOnCorrectElement",
+                    },
+                    new WsTrustTheoryData(WsTrustVersion.TrustFeb2005)
+                    {
+                        Reader = WsTrustReferenceXml.GetOnBehalfOfSecurityTokenReader(WsTrustConstants.TrustFeb2005, ReferenceXml.Saml2Valid),
+                        TestId = "OnBeahlfOf_WsTrustFeb2005",
+                        OnBehalfOf = new SecurityTokenElement(saml2Token),
+                    },
+                    new WsTrustTheoryData(WsTrustVersion.Trust13)
+                    {
+                        Reader = WsTrustReferenceXml.GetOnBehalfOfSecurityTokenReader(WsTrustConstants.Trust13, ReferenceXml.Saml2Valid),
+                        TestId = "OnBeahlfOf_WsTrust13",
+                        OnBehalfOf = new SecurityTokenElement(saml2Token),
+                    }
+                };
+
+                return theoryData;
+            }
+        }
+
+        [Theory, MemberData(nameof(ReadActAsTestCases))]
+        public void ReadActAs(WsTrustTheoryData theoryData)
+        {
+            var context = TestUtilities.WriteHeader($"{this}.ReadActAs", theoryData);
+
+            try
+            {
+                var actAs = theoryData.WsTrustSerializer.ReadActAs(theoryData.Reader, theoryData.WsSerializationContext);
+                theoryData.ExpectedException.ProcessNoException(context);
+                IdentityComparer.AreEqual(actAs, theoryData.ActAs, context);
+            }
+            catch (Exception ex)
+            {
+                theoryData.ExpectedException.ProcessException(ex, context);
+            }
+
+            TestUtilities.AssertFailIfErrors(context);
+        }
+
+        public static TheoryData<WsTrustTheoryData> ReadActAsTestCases
+        {
+            get
+            {
+                var saml2TokenHandler = new Saml2SecurityTokenHandler();
+                var saml2Token = saml2TokenHandler.ReadToken(ReferenceXml.Saml2Valid);
+
+                var theoryData = new TheoryData<WsTrustTheoryData>
+                {
+                    new WsTrustTheoryData(WsTrustVersion.Trust14)
+                    {
+                        ExpectedException = ExpectedException.ArgumentNullException("reader"),
+                        Reader = null,
+                        TestId = "ReaderNull",
+                    },
+                    new WsTrustTheoryData(WsTrustVersion.Trust14)
+                    {
+                        ExpectedException = ExpectedException.XmlReadException(),
+                        Reader = WsTrustReferenceXml.RandomElementReader,
+                        TestId = "ReaderNotOnCorrectElement",
+                    },
+                    new WsTrustTheoryData(WsTrustVersion.Trust13)
+                    {
+                        Reader = WsTrustReferenceXml.GetActAsSecurityTokenReader(ReferenceXml.Saml2Valid),
+                        TestId = "ActAs_Trust13",
+                        ActAs = new SecurityTokenElement(saml2Token),
+                    },
+                    new WsTrustTheoryData(WsTrustVersion.Trust14)
+                    {
+                        Reader = WsTrustReferenceXml.GetActAsSecurityTokenReader(ReferenceXml.Saml2Valid),
+                        TestId = "ActAs_Trust14",
+                        ActAs = new SecurityTokenElement(saml2Token),
                     }
                 };
 
@@ -755,6 +829,51 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust.Tests
                     {
                         ExpectedException = ExpectedException.ArgumentNullException("onBehalfOf"),
                         TestId = "OnBehalfOfNull"
+                    }
+                };
+            }
+        }
+
+        [Theory, MemberData(nameof(WriteActAsTestCases))]
+        public void WriteActAs(WsTrustTheoryData theoryData)
+        {
+            var context = TestUtilities.WriteHeader($"{this}.WriteActAs", theoryData);
+            try
+            {
+                theoryData.WsTrustSerializer.WriteActAs(theoryData.Writer, theoryData.WsSerializationContext, theoryData.OnBehalfOf);
+                //IdentityComparer.AreEqual(lifetime, theoryData.Lifetime, context);
+            }
+            catch (Exception ex)
+            {
+                theoryData.ExpectedException.ProcessException(ex, context);
+            }
+
+            TestUtilities.AssertFailIfErrors(context);
+        }
+
+        public static TheoryData<WsTrustTheoryData> WriteActAsTestCases
+        {
+            get
+            {
+                return new TheoryData<WsTrustTheoryData>
+                {
+                    new WsTrustTheoryData(new MemoryStream())
+                    {
+                        ExpectedException = ExpectedException.ArgumentNullException("serializationContext"),
+                        First = true,
+                        OnBehalfOf = new SecurityTokenElement(new SecurityTokenReference()),
+                        TestId = "SerializationContextNull"
+                    },
+                    new WsTrustTheoryData(WsTrustVersion.Trust13)
+                    {
+                        ExpectedException = ExpectedException.ArgumentNullException("writer"),
+                        OnBehalfOf = new SecurityTokenElement(new SecurityTokenReference()),
+                        TestId = "WriterNull",
+                    },
+                    new WsTrustTheoryData(new MemoryStream(), WsTrustVersion.Trust13)
+                    {
+                        ExpectedException = ExpectedException.ArgumentNullException("actAs"),
+                        TestId = "ActAsNull"
                     }
                 };
             }

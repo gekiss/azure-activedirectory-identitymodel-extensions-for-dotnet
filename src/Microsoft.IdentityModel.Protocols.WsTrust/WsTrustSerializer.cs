@@ -323,6 +323,58 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust
             throw XmlUtil.LogReadException(LogMessages.IDX15101, reader.ReadOuterXml());
         }
 
+        /// <summary>
+        /// Reads the &lt;ActAs&gt; element.
+        /// <para>see: http://docs.oasis-open.org/ws-sx/ws-trust/v1.4/ws-trust.html </para>
+        /// </summary>
+        /// <param name="reader">A <see cref="XmlDictionaryReader"/> positioned at a ActAs element.</param>
+        /// <param name="serializationContext">A <see cref="WsSerializationContext"/> defines specification versions that are expected.</param>
+        /// <returns>A <see cref="SecurityTokenElement"/> instance.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="reader"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="serializationContext"/> is null.</exception>
+        /// <exception cref="XmlReadException">Thrown if <paramref name="reader"/> is not positioned at &lt;ActAs&gt;.</exception>
+        public virtual SecurityTokenElement ReadActAs(XmlDictionaryReader reader, WsSerializationContext serializationContext)
+        {
+            //  <tr:ActAs>
+            //      one of
+            //      <wsse:SecurityTokenReference>
+            //      <wsa:EndpointReference>
+            //      <SecurityToken>
+            //  </tr:ActAs>
+
+            WsUtils.CheckReaderOnEntry(reader);
+
+            if (!reader.IsStartElement(WsTrustElements.ActAs, WsTrustConstants.Trust14.Namespace))
+                throw XmlUtil.LogReadException(LogMessages.IDX15011, WsTrustConstants.Trust14.Namespace, WsTrustElements.ActAs, reader.NamespaceURI, reader.LocalName);
+
+            try
+            {
+                reader.MoveToContent();
+                bool isEmptyElement = reader.IsEmptyElement;
+                reader.ReadStartElement();
+                foreach (SecurityTokenHandler tokenHandler in SecurityTokenHandlers)
+                {
+                    if (tokenHandler.CanReadToken(reader))
+                    {
+                        SecurityToken token = tokenHandler.ReadToken(reader);
+                        if (!isEmptyElement)
+                            reader.ReadEndElement();
+
+                        return new SecurityTokenElement(token);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                if (ex is XmlReadException)
+                    throw;
+
+                throw XmlUtil.LogReadException(LogMessages.IDX15017, ex, WsTrustElements.ActAs, ex);
+            }
+
+            throw XmlUtil.LogReadException(LogMessages.IDX15101, reader.ReadOuterXml());
+        }
+
         private static SecurityTokenReference ReadReference(XmlDictionaryReader reader, string elementName)
         {
             //  <wsse:SecurityTokenReference ...>
@@ -425,6 +477,10 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust
                 else if (reader.IsStartElement(WsTrustElements.OnBehalfOf, serializationContext.TrustConstants.Namespace))
                 {
                     trustRequest.OnBehalfOf = ReadOnBehalfOf(reader, serializationContext);
+                }
+                else if (reader.IsStartElement(WsTrustElements.ActAs, WsTrustConstants.Trust14.Namespace))
+                {
+                    trustRequest.ActAs = ReadActAs(reader, serializationContext);
                 }
                 else if (reader.IsStartElement(WsTrustElements.TokenType, serializationContext.TrustConstants.Namespace))
                 {
@@ -1191,6 +1247,62 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust
         }
 
         /// <summary>
+        /// Writes a &lt;ActAs&gt; element.
+        /// <para>see: http://docs.oasis-open.org/ws-sx/ws-trust/v1.4/ws-trust.html </para>
+        /// </summary>
+        /// <param name="writer">A <see cref="XmlDictionaryWriter"/> to write the element into.</param>
+        /// <param name="serializationContext">A <see cref="WsSerializationContext"/> defines specification versions that are expected.</param>
+        /// <param name="actAs">The <see cref="SecurityTokenElement"/> to write.</param>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="writer"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="serializationContext"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="actAs"/> is null.</exception>
+        /// <exception cref="XmlWriteException">If an error occurs when writing the element.</exception>
+        public void WriteActAs(XmlDictionaryWriter writer, WsSerializationContext serializationContext, SecurityTokenElement actAs)
+        {
+            //  <tr:ActAs>
+            //      one of
+            //      <wsse:SecurityTokenReference>
+            //      <wsa:EndpointReference>
+            //      <SecurityToken>
+            //  </tr:ActAs>
+
+            // TODO write references, etc.
+            WsUtils.ValidateParamsForWritting(writer, serializationContext, actAs, nameof(actAs));
+
+            try
+            {
+                writer.WriteStartElement(WsTrustConstants.Trust14.Prefix, WsTrustElements.ActAs, WsTrustConstants.Trust14.Namespace);
+                if (actAs.SecurityToken != null)
+                {
+                    bool tryWriteSucceeded = false;
+                    if (actAs.SecurityToken is Saml2SecurityToken saml2SecurityToken)
+                        tryWriteSucceeded = TryWriteSourceData(writer, saml2SecurityToken.Assertion, _saml2AssertionType);
+                    else if (actAs.SecurityToken is SamlSecurityToken samlSecurityToken)
+                        tryWriteSucceeded = TryWriteSourceData(writer, samlSecurityToken.Assertion, _samlAssertionType);
+
+                    if (!tryWriteSucceeded)
+                        foreach (SecurityTokenHandler tokenHandler in SecurityTokenHandlers)
+                        {
+                            if (tokenHandler.TokenType == actAs.SecurityToken.GetType())
+                            {
+                                tokenHandler.WriteToken(writer, actAs.SecurityToken);
+                                break;
+                            }
+                        }
+                }
+
+                writer.WriteEndElement();
+            }
+            catch (Exception ex)
+            {
+                if (ex is XmlWriteException)
+                    throw;
+
+                throw XmlUtil.LogWriteException(LogMessages.IDX15407, ex, WsTrustElements.ActAs, ex);
+            }
+        }
+
+        /// <summary>
         /// A method like this should be added to the tokenhandlers, when the original data is needed.
         /// </summary>
         /// <param name="writer"></param>
@@ -1318,6 +1430,9 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust
 
                 if (trustRequest.OnBehalfOf != null)
                     WriteOnBehalfOf(writer, serializationContext, trustRequest.OnBehalfOf);
+
+                if (trustRequest.ActAs != null)
+                    WriteActAs(writer, serializationContext, trustRequest.ActAs);
 
                 if (trustRequest.AdditionalContext != null)
                     WsFedSerializer.WriteAdditionalContext(writer, serializationContext, trustRequest.AdditionalContext);
