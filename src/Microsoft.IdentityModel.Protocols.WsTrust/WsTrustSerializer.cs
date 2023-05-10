@@ -474,6 +474,10 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust
                 {
                     trustRequest.RequestType = WsUtils.ReadStringElement(reader);
                 }
+                else if (reader.IsStartElement(WsTrustElements.Lifetime, serializationContext.TrustConstants.Namespace))
+                {
+                    trustRequest.Lifetime = ReadLifetime(reader, serializationContext);
+                }
                 else if (reader.IsStartElement(WsTrustElements.OnBehalfOf, serializationContext.TrustConstants.Namespace))
                 {
                     trustRequest.OnBehalfOf = ReadOnBehalfOf(reader, serializationContext);
@@ -1396,6 +1400,9 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust
                     attribute.WriteTo(writer);
 
                 writer.WriteElementString(serializationContext.TrustConstants.Prefix, WsTrustElements.RequestType, serializationContext.TrustConstants.Namespace, trustRequest.RequestType);
+
+                if (trustRequest.Lifetime != null)
+                    WriteLifetime(writer, serializationContext, trustRequest.Lifetime);
 
                 if (!string.IsNullOrEmpty(trustRequest.TokenType))
                     writer.WriteElementString(serializationContext.TrustConstants.Prefix, WsTrustElements.TokenType, serializationContext.TrustConstants.Namespace, trustRequest.TokenType);
