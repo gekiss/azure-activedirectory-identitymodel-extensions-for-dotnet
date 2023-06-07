@@ -2,7 +2,12 @@
   <Import Project="..\..\build\common.props" />
   <PropertyGroup>
     <AssemblyName>Microsoft.IdentityModel.Protocols.WsTrust</AssemblyName>
-    <Description>Includes types that provide support for creating, serializing and validating WsTrust Messages.</Description>
+    <Description>(Unofficial) Includes types that provide support for creating, serializing and validating WsTrust Messages. Includes the following improvements and modifications:
+- Fixed Scope element serialization
+- Added WS-Identity 1.0 support
+- Added WS-Trust 1.4 (ActAs, InteractiveChallenge) support 
+- Added WS-Trust 1.3 Secondary parameters support
+    </Description>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageId>Microsoft.IdentityModel.Protocols.WsTrust</PackageId>
     <PackageTags>.NET;Windows;Authentication;Identity;WsTrust</PackageTags>

@@ -237,6 +237,21 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust.Tests
                         },
                         TestId = "WsTrustRequestWithInteractiveChallengeResponse",
                         WsTrustVersion = WsTrustVersion.Trust13
+                    },
+                    new WsTrustTheoryData
+                    {
+                        WsTrustRequest = new WsTrustRequest(trustConstants.WsTrustActions.Issue)
+                        {
+                            AppliesTo = WsDefaults.AppliesTo,
+                            SecondaryParameters = new WsTrustRequest(trustConstants.WsTrustActions.Issue)
+                            {
+                                Claims = claims,
+                                TokenType = Saml2Constants.OasisWssSaml2TokenProfile11,
+                                KeyType = trustConstants.WsTrustKeyTypes.Symmetric,
+                            },
+                        },
+                        TestId = "WsTrustRequestWithSecondaryParameters",
+                        WsTrustVersion = WsTrustVersion.Trust13
                     }
                 };
             }
