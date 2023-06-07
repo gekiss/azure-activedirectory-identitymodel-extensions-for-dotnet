@@ -33,6 +33,7 @@ using Microsoft.IdentityModel.Protocols.WsAddressing;
 using Microsoft.IdentityModel.Protocols.WsFed;
 using Microsoft.IdentityModel.Protocols.WsPolicy;
 using Microsoft.IdentityModel.Protocols.WsSecurity;
+using Microsoft.IdentityModel.Protocols.WsTrust14;
 
 namespace Microsoft.IdentityModel.Protocols.WsTrust
 {
@@ -70,6 +71,8 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust
         private string _tokenType;
         private WsTrustVersion _wsTrustVersion;
         private UseKey _useKey;
+        private InteractiveChallenge _interactiveChallenge;
+        private InteractiveChallengeResponse _interactiveChallengeResponse;
 
         /// <summary>
         /// Gets or sets a SecurityTokenElement representing the ActAs element used to convey information about the identity to be represented in the token.
@@ -242,6 +245,28 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust
         {
             get;
             set;
+        }
+
+        /// <summary>
+        /// Gets or sets a InteractiveChallenge representing the InteractiveChallenge element used to specify user interaction request.
+        /// <para>see: http://docs.oasis-open.org/ws-sx/ws-trust/v1.4/ws-trust.html </para>
+        /// </summary>
+        /// <exception cref="ArgumentNullException">thrown if InteractiveChallenge is null.</exception>
+        public InteractiveChallenge InteractiveChallenge
+        {
+            get => _interactiveChallenge;
+            set => _interactiveChallenge = value ?? throw LogHelper.LogArgumentNullException(nameof(InteractiveChallenge));
+        }
+
+        /// <summary>
+        /// Gets or sets a InteractiveChallengeResponse representing the InteractiveChallengeResponse element used to specify user interaction response.
+        /// <para>see: http://docs.oasis-open.org/ws-sx/ws-trust/v1.4/ws-trust.html </para>
+        /// </summary>
+        /// <exception cref="ArgumentNullException">thrown if InteractiveChallengeResponse is null.</exception>
+        public InteractiveChallengeResponse InteractiveChallengeResponse
+        {
+            get => _interactiveChallengeResponse;
+            set => _interactiveChallengeResponse = value ?? throw LogHelper.LogArgumentNullException(nameof(InteractiveChallengeResponse));
         }
 
         /// <summary>

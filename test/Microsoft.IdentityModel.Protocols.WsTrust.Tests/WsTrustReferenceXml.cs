@@ -32,6 +32,7 @@ using System.Xml;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.IdentityModel.Protocols.WsFed;
 using Microsoft.IdentityModel.Protocols.WsIdentity;
+using Microsoft.IdentityModel.Protocols.WsTrust14;
 using Microsoft.IdentityModel.Protocols.WsUtility;
 using Microsoft.IdentityModel.TestUtils;
 
@@ -96,6 +97,69 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust.Tests
                 WsTrustElements.Lifetime,
                 WsUtilityElements.Created,
                 WsTrustElements.Expires));
+        }
+
+        #endregion
+
+        #region InteractiveChallenge
+        public static string GetInteractiveChallenge(bool includeNamespace = true)
+        {
+            WsTrustConstants trustConstants = WsTrustConstants.Trust14;
+
+            string challenge = @"
+        <wst14:Title>Please answer the following additional questions to login.</wst14:Title>
+        <wst14:TextChallenge RefId=""http://host/ref#text1"" Label=""Mother’s Maiden Name"" MaxLen=""80"" />
+        <wst14:ChoiceChallenge RefId=""http://host/ref#choiceGroupA"" Label=""Your Age Group:"" ExactlyOne=""true"">
+          <wst14:Choice RefId=""http://host/ref#choice1"" Label=""18-30"" />
+          <wst14:Choice RefId=""http://host/ref#choice2"" Label=""31-40"" />
+          <wst14:Choice RefId=""http://host/ref#choice3"" Label=""41-50"" />
+          <wst14:Choice RefId=""http://host/ref#choice4"" Label=""50+"" />
+        </wst14:ChoiceChallenge>
+        <wst14:ContextData RefId=""http://host/ref#cookie1"">
+        </wst14:ContextData>
+                ";
+
+            if (includeNamespace)
+                return LogHelper.FormatInvariant(
+                     @"<{0}:{3} xmlns:{0}=""{1}"">{2}</{0}:{3}>",
+                        trustConstants.Prefix,
+                        trustConstants.Namespace,
+                        challenge,
+                        WsTrust14Elements.InteractiveChallenge);
+            else
+                return LogHelper.FormatInvariant(
+                     @"<{0}:{2} >{1}</{0}:{2}>",
+                     trustConstants.Prefix,
+                     challenge,
+                     WsTrust14Elements.InteractiveChallenge);
+        }
+
+        public static string GetInteractiveChallengeResponse(bool includeNamespace = true)
+        {
+            WsTrustConstants trustConstants = WsTrustConstants.Trust14;
+
+            string challengeResponse = @"
+        <wst14:TextChallengeResponse RefId=""http:/host/ref#text1"">Goldstein</wst14:TextChallengeResponse>
+        <wst14:ChoiceChallengeResponse RefId=""http://host/ref#choiceGroupA"">
+          <wst14:ChoiceSelected RefId=""http://host/ref#choice3"" />
+        </wst14:ChoiceChallengeResponse>
+        <wst14:ContextData RefId=""http://host/ref#cookie1"">
+        </wst14:ContextData>
+                ";
+
+            if (includeNamespace)
+                return LogHelper.FormatInvariant(
+                     @"<{0}:{3} xmlns:{0}=""{1}"">{2}</{0}:{3}>",
+                        trustConstants.Prefix,
+                        trustConstants.Namespace,
+                        challengeResponse,
+                        WsTrust14Elements.InteractiveChallengeResponse);
+            else
+                return LogHelper.FormatInvariant(
+                     @"<{0}:{2} >{1}</{0}:{2}>",
+                     trustConstants.Prefix,
+                     challengeResponse,
+                     WsTrust14Elements.InteractiveChallengeResponse);
         }
 
         #endregion
@@ -264,7 +328,6 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust.Tests
         }
 
         #endregion
-
 
         public static XmlDictionaryReader RandomElementReader => XmlUtilities.CreateDictionaryReader(@"<z:SomeRandomElement xmlns:z=""http://some.random.namespace.xsd"" >SomeRamdonValue</z:SomeRandomElement>");
 

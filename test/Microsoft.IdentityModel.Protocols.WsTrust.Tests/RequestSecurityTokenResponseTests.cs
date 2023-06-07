@@ -30,6 +30,7 @@ using System.IO;
 using System.Text;
 using System.Xml;
 using Microsoft.IdentityModel.Protocols.WsSecurity;
+using Microsoft.IdentityModel.Protocols.WsTrust14;
 using Microsoft.IdentityModel.TestUtils;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.IdentityModel.Tokens.Saml2;
@@ -107,6 +108,23 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust.Tests
                 var tokenDescriptor = Default.SecurityTokenDescriptor(Default.AsymmetricSigningCredentials);
                 XmlElement xmlElement = CreateXmlElement(tokenHandler, tokenDescriptor);
 
+                var interactiveChallenge = new InteractiveChallenge();
+                interactiveChallenge.Title = "Please answer the following additional questions to login.";
+                interactiveChallenge.TextChallenge.Add(new TextChallenge("http://.../ref#text1", "Mother’s Maiden Name") { MaxLen = 80 });
+                interactiveChallenge.ChoiceChallenge.Add(new ChoiceChallenge("http://.../ref#choiceGroupA", "Your Age Group:",
+                    new[] {
+                        new ChoiceItem("http://.../ref#choice1", "18-30"),
+                        new ChoiceItem("http://.../ref#choice2", "31-40"),
+                        new ChoiceItem("http://.../ref#choice3", "41-50"),
+                        new ChoiceItem("http://.../ref#choice4", "50+")
+                    }) { ExactlyOne = true });
+                interactiveChallenge.ContextData.Add(new ContextData("http://.../ref#cookie1", new ContextDataContent("some cookie value")));
+
+                var interactiveChallengeResponse = new InteractiveChallengeResponse();
+                interactiveChallengeResponse.TextChallengeResponse.Add(new TextChallengeResponse("http://.../ref#text1", "Goldstein"));
+                interactiveChallengeResponse.ChoiceChallengeResponse.Add(new ChoiceChallengeResponse("http://.../ref#choiceGroupA", new string[] { "http://.../ref#choice3" }));
+                interactiveChallengeResponse.ContextData.Add(new ContextData("http://.../ref#cookie1", new ContextDataContent("some cookie value")));
+
                 return new TheoryData<WsTrustTheoryData>
                 {
                     new WsTrustTheoryData
@@ -132,6 +150,30 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust.Tests
                             RequestedSecurityToken = new RequestedSecurityToken(xmlElement),
                             TokenType = Saml2Constants.OasisWssSaml2TokenProfile11,
                             UnattachedReference = WsDefaults.SecurityTokenReference
+                        }),
+                        WsTrustVersion = WsTrustVersion.Trust13
+                    },
+                    new WsTrustTheoryData
+                    {
+                        TestId = "WsTrustResponseWithInteractiveChallenge",
+                        WsTrustResponse = new WsTrustResponse(new RequestSecurityTokenResponse
+                        {
+                            AppliesTo = WsDefaults.AppliesTo,
+                            Entropy = new Entropy(new BinarySecret(Guid.NewGuid().ToByteArray(), WsSecurityEncodingTypes.WsSecurity11.Base64)),
+                            Lifetime = new Lifetime(DateTime.UtcNow, DateTime.UtcNow + TimeSpan.FromDays(1)),
+                            InteractiveChallenge = interactiveChallenge,
+                        }),
+                        WsTrustVersion = WsTrustVersion.Trust13
+                    },
+                    new WsTrustTheoryData
+                    {
+                        TestId = "WsTrustResponseWithInteractiveChallengeResponse",
+                        WsTrustResponse = new WsTrustResponse(new RequestSecurityTokenResponse
+                        {
+                            AppliesTo = WsDefaults.AppliesTo,
+                            Entropy = new Entropy(new BinarySecret(Guid.NewGuid().ToByteArray(), WsSecurityEncodingTypes.WsSecurity11.Base64)),
+                            Lifetime = new Lifetime(DateTime.UtcNow, DateTime.UtcNow + TimeSpan.FromDays(1)),
+                            InteractiveChallengeResponse = interactiveChallengeResponse,
                         }),
                         WsTrustVersion = WsTrustVersion.Trust13
                     }

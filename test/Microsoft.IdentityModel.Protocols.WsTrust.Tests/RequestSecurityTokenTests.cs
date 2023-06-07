@@ -36,6 +36,7 @@ using System.Text;
 using System.Xml;
 using Microsoft.IdentityModel.Protocols.WsFed;
 using Microsoft.IdentityModel.Protocols.WsPolicy;
+using Microsoft.IdentityModel.Protocols.WsTrust14;
 using Microsoft.IdentityModel.TestUtils;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.IdentityModel.Tokens.Saml2;
@@ -78,6 +79,24 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust.Tests
         {
             get
             {
+                var interactiveChallenge = new InteractiveChallenge();
+                interactiveChallenge.Title = "Please answer the following additional questions to login.";
+                interactiveChallenge.TextChallenge.Add(new TextChallenge("http://.../ref#text1", "Mother’s Maiden Name") { MaxLen = 80 });
+                interactiveChallenge.ChoiceChallenge.Add(new ChoiceChallenge("http://.../ref#choiceGroupA", "Your Age Group:",
+                    new[] {
+                        new ChoiceItem("http://.../ref#choice1", "18-30"),
+                        new ChoiceItem("http://.../ref#choice2", "31-40"),
+                        new ChoiceItem("http://.../ref#choice3", "41-50"),
+                        new ChoiceItem("http://.../ref#choice4", "50+")
+                    })
+                { ExactlyOne = true });
+                interactiveChallenge.ContextData.Add(new ContextData("http://.../ref#cookie1", new ContextDataContent("some cookie value")));
+
+                var interactiveChallengeResponse = new InteractiveChallengeResponse();
+                interactiveChallengeResponse.TextChallengeResponse.Add(new TextChallengeResponse("http://.../ref#text1", "Goldstein"));
+                interactiveChallengeResponse.ChoiceChallengeResponse.Add(new ChoiceChallengeResponse("http://.../ref#choiceGroupA", new string[] { "http://.../ref#choice3" }));
+                interactiveChallengeResponse.ContextData.Add(new ContextData("http://.../ref#cookie1", new ContextDataContent("some cookie value")));
+
                 var additionalContext = new AdditionalContext(
                     new List<ContextItem>
                     {
@@ -191,13 +210,32 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust.Tests
                     //    <wsp:PolicyReference URI="EX_MBI_FED_SSL"></wsp:PolicyReference>
                     //</t:RequestSecurityToken>
 
-
                     new WsTrustTheoryData
                     {
                         First = true,
                         PropertiesToIgnoreWhenComparing = propertiesToIgnoreWhenComparing,
                         WsTrustRequest = wsTrustRequest,
                         TestId = "WsTrustRequestWithSaml2OBO",
+                        WsTrustVersion = WsTrustVersion.Trust13
+                    },
+                    new WsTrustTheoryData
+                    {
+                        WsTrustRequest = new WsTrustRequest(trustConstants.WsTrustActions.Issue)
+                        {
+                            AppliesTo = WsDefaults.AppliesTo,
+                            InteractiveChallenge = interactiveChallenge,
+                        },
+                        TestId = "WsTrustRequestWithInteractiveChallenge",
+                        WsTrustVersion = WsTrustVersion.Trust13
+                    },
+                    new WsTrustTheoryData
+                    {
+                        WsTrustRequest = new WsTrustRequest(trustConstants.WsTrustActions.Issue)
+                        {
+                            AppliesTo = WsDefaults.AppliesTo,
+                            InteractiveChallengeResponse = interactiveChallengeResponse,
+                        },
+                        TestId = "WsTrustRequestWithInteractiveChallengeResponse",
                         WsTrustVersion = WsTrustVersion.Trust13
                     }
                 };

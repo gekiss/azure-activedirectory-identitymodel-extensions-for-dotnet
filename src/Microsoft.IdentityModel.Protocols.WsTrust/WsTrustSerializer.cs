@@ -38,6 +38,7 @@ using Microsoft.IdentityModel.Protocols.WsFed;
 using Microsoft.IdentityModel.Protocols.WsIdentity;
 using Microsoft.IdentityModel.Protocols.WsPolicy;
 using Microsoft.IdentityModel.Protocols.WsSecurity;
+using Microsoft.IdentityModel.Protocols.WsTrust14;
 using Microsoft.IdentityModel.Protocols.WsUtility;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.IdentityModel.Tokens.Saml;
@@ -62,6 +63,7 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust
         private readonly WsFedSerializer _wsFedSerializer = new WsFedSerializer();
         private readonly WsIdentitySerializer _wsIdentitySerializer = new WsIdentitySerializer();
         private readonly WsPolicySerializer _wsPolicySerializer = new WsPolicySerializer();
+        private readonly WsTrust14Serializer _wsTrust14Serializer = new WsTrust14Serializer();
 
         internal const string GeneratedDateTimeFormat = "yyyy-MM-ddTHH:mm:ss.fffffZ";
 
@@ -490,6 +492,14 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust
                 {
                     trustRequest.TokenType = WsUtils.ReadStringElement(reader);
                 }
+                else if (reader.IsStartElement(WsTrust14Elements.InteractiveChallenge, WsTrustConstants.Trust14.Namespace))
+                {
+                    trustRequest.InteractiveChallenge = _wsTrust14Serializer.ReadInteractiveChallenge(reader);
+                }
+                else if (reader.IsStartElement(WsTrust14Elements.InteractiveChallengeResponse, WsTrustConstants.Trust14.Namespace))
+                {
+                    trustRequest.InteractiveChallengeResponse = _wsTrust14Serializer.ReadInteractiveChallengeResponse(reader);
+                }
                 else if (reader.IsStartElement(WsTrustElements.KeyType, serializationContext.TrustConstants.Namespace))
                 {
                     trustRequest.KeyType = WsUtils.ReadStringElement(reader);
@@ -601,6 +611,14 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust
                     if (reader.IsStartElement(WsTrustElements.TokenType, serializationContext.TrustConstants.Namespace))
                     {
                         tokenResponse.TokenType = WsUtils.ReadStringElement(reader);
+                    }
+                    else if (reader.IsStartElement(WsTrust14Elements.InteractiveChallenge, WsTrustConstants.Trust14.Namespace))
+                    {
+                        tokenResponse.InteractiveChallenge = _wsTrust14Serializer.ReadInteractiveChallenge(reader);
+                    }
+                    else if (reader.IsStartElement(WsTrust14Elements.InteractiveChallengeResponse, WsTrustConstants.Trust14.Namespace))
+                    {
+                        tokenResponse.InteractiveChallengeResponse = _wsTrust14Serializer.ReadInteractiveChallengeResponse(reader);
                     }
                     else if (reader.IsStartElement(WsTrustElements.Lifetime, serializationContext.TrustConstants.Namespace))
                     {
@@ -1407,6 +1425,12 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust
                 if (!string.IsNullOrEmpty(trustRequest.TokenType))
                     writer.WriteElementString(serializationContext.TrustConstants.Prefix, WsTrustElements.TokenType, serializationContext.TrustConstants.Namespace, trustRequest.TokenType);
 
+                if (trustRequest.InteractiveChallenge != null)
+                    WsTrust14Serializer.WriteInteractiveChallenge(writer, trustRequest.InteractiveChallenge);
+
+                if (trustRequest.InteractiveChallengeResponse != null)
+                    WsTrust14Serializer.WriteInteractiveChallengeResponse(writer, trustRequest.InteractiveChallengeResponse);
+
                 if (!string.IsNullOrEmpty(trustRequest.KeyType))
                     writer.WriteElementString(serializationContext.TrustConstants.Prefix, WsTrustElements.KeyType, serializationContext.TrustConstants.Namespace, trustRequest.KeyType);
 
@@ -1513,6 +1537,14 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust
                 //  <TokenType>
                 if (!string.IsNullOrEmpty(requestSecurityTokenResponse.TokenType))
                     writer.WriteElementString(serializationContext.TrustConstants.Prefix, WsTrustElements.TokenType, serializationContext.TrustConstants.Namespace, requestSecurityTokenResponse.TokenType);
+
+                // <InteractiveChallenge>
+                if (requestSecurityTokenResponse.InteractiveChallenge != null)
+                    WsTrust14Serializer.WriteInteractiveChallenge(writer, requestSecurityTokenResponse.InteractiveChallenge);
+
+                // <InteractiveChallengeResponse>
+                if (requestSecurityTokenResponse.InteractiveChallengeResponse != null)
+                    WsTrust14Serializer.WriteInteractiveChallengeResponse(writer, requestSecurityTokenResponse.InteractiveChallengeResponse);
 
                 //  <RequestedSecurityToken>
                 if (requestSecurityTokenResponse.RequestedSecurityToken != null)
