@@ -329,6 +329,60 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust.Tests
 
         #endregion
 
+        #region Encryption
+
+        public static string GetEncryptionSecurityToken(WsTrustConstants trustConstants, string token, bool includeNamespace = true)
+        {
+            if (includeNamespace)
+                return LogHelper.FormatInvariant(
+                     @"<{0}:{3} xmlns:{0}=""{1}"">{2}</{0}:{3}>",
+                        trustConstants.Prefix,
+                        trustConstants.Namespace,
+                        token,
+                        WsTrustElements.Encryption);
+            else
+                return LogHelper.FormatInvariant(
+                     @"<{0}:{2} >{1}</{0}:{2}>",
+                     trustConstants.Prefix,
+                     token,
+                     WsTrustElements.Encryption);
+
+        }
+
+        public static XmlDictionaryReader GetEncryptionSecurityTokenReader(WsTrustConstants trustConstants, string token, bool includeNamespace = true)
+        {
+            return XmlUtilities.CreateDictionaryReader(GetEncryptionSecurityToken(trustConstants, token, includeNamespace));
+        }
+
+        #endregion
+
+        #region ProofEncryption
+
+        public static string GetProofEncryptionSecurityToken(WsTrustConstants trustConstants, string token, bool includeNamespace = true)
+        {
+            if (includeNamespace)
+                return LogHelper.FormatInvariant(
+                     @"<{0}:{3} xmlns:{0}=""{1}"">{2}</{0}:{3}>",
+                        trustConstants.Prefix,
+                        trustConstants.Namespace,
+                        token,
+                        WsTrustElements.ProofEncryption);
+            else
+                return LogHelper.FormatInvariant(
+                     @"<{0}:{2} >{1}</{0}:{2}>",
+                     trustConstants.Prefix,
+                     token,
+                     WsTrustElements.ProofEncryption);
+
+        }
+
+        public static XmlDictionaryReader GetProofEncryptionSecurityTokenReader(WsTrustConstants trustConstants, string token, bool includeNamespace = true)
+        {
+            return XmlUtilities.CreateDictionaryReader(GetProofEncryptionSecurityToken(trustConstants, token, includeNamespace));
+        }
+
+        #endregion
+
         public static XmlDictionaryReader RandomElementReader => XmlUtilities.CreateDictionaryReader(@"<z:SomeRandomElement xmlns:z=""http://some.random.namespace.xsd"" >SomeRamdonValue</z:SomeRandomElement>");
 
         public static string WTrustResponseSaml2

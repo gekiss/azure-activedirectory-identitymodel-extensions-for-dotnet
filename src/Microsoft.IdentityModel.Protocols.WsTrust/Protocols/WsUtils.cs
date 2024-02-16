@@ -123,6 +123,30 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust
         }
 
         /// <summary>
+        /// Helper method to read an boolean element
+        /// </summary>
+        /// <param name="reader"></param>
+        /// <returns></returns>
+        internal static bool? ReadBooleanElement(XmlDictionaryReader reader)
+        {
+            if (reader == null)
+                throw LogHelper.LogArgumentNullException(nameof(reader));
+
+            if (reader.IsEmptyElement)
+            {
+                reader.ReadStartElement();
+                return null;
+            }
+
+            reader.ReadStartElement();
+            var boolVal = reader.ReadContentAsBoolean();
+            reader.MoveToContent();
+            reader.ReadEndElement();
+
+            return boolVal;
+        }
+
+        /// <summary>
         /// Checks standard items on a write call.
         /// </summary>
         internal static void ValidateParamsForWritting(XmlWriter writer, WsSerializationContext serializationContext, object obj, string objName)

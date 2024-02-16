@@ -79,6 +79,8 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust.Tests
 
         public SecurityTokenElement ActAs { get; set; }
 
+        public SecurityTokenElement Encryption { get; set; }
+
         public SecurityTokenElement ProofEncryption { get; set; }
 
         public XmlDictionaryReader Reader { get; set; }

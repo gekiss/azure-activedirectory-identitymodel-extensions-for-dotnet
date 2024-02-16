@@ -437,6 +437,123 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust.Tests
             }
         }
 
+        [Theory, MemberData(nameof(ReadEncryptionTestCases))]
+        public void ReadEncryption(WsTrustTheoryData theoryData)
+        {
+            var context = TestUtilities.WriteHeader($"{this}.ReadEncryption", theoryData);
+
+            try
+            {
+                var encryption = theoryData.WsTrustSerializer.ReadEncryption(theoryData.Reader, theoryData.WsSerializationContext);
+                theoryData.ExpectedException.ProcessNoException(context);
+                IdentityComparer.AreEqual(encryption, theoryData.Encryption, context);
+            }
+            catch (Exception ex)
+            {
+                theoryData.ExpectedException.ProcessException(ex, context);
+            }
+
+            TestUtilities.AssertFailIfErrors(context);
+        }
+
+        public static TheoryData<WsTrustTheoryData> ReadEncryptionTestCases
+        {
+            get
+            {
+                var saml2TokenHandler = new Saml2SecurityTokenHandler();
+                var saml2Token = saml2TokenHandler.ReadToken(ReferenceXml.Saml2Valid);
+
+                var theoryData = new TheoryData<WsTrustTheoryData>
+                {
+                    new WsTrustTheoryData(WsTrustVersion.Trust14)
+                    {
+                        ExpectedException = ExpectedException.ArgumentNullException("reader"),
+                        Reader = null,
+                        TestId = "ReaderNull",
+                    },
+                    new WsTrustTheoryData(WsTrustVersion.Trust14)
+                    {
+                        ExpectedException = ExpectedException.XmlReadException(),
+                        Reader = WsTrustReferenceXml.RandomElementReader,
+                        TestId = "ReaderNotOnCorrectElement",
+                    },
+                    new WsTrustTheoryData(WsTrustVersion.TrustFeb2005)
+                    {
+                        Reader = WsTrustReferenceXml.GetEncryptionSecurityTokenReader(WsTrustConstants.TrustFeb2005, ReferenceXml.Saml2Valid),
+                        TestId = "Encryption_WsTrustFeb2005",
+                        Encryption = new SecurityTokenElement(saml2Token),
+                    },
+                    new WsTrustTheoryData(WsTrustVersion.Trust13)
+                    {
+                        Reader = WsTrustReferenceXml.GetEncryptionSecurityTokenReader(WsTrustConstants.Trust13, ReferenceXml.Saml2Valid),
+                        TestId = "Encryption_WsTrust13",
+                        Encryption = new SecurityTokenElement(saml2Token),
+                    }
+                };
+
+                return theoryData;
+            }
+        }
+
+        [Theory, MemberData(nameof(ReadProofEncryptionTestCases))]
+        public void ReadProofEncryption(WsTrustTheoryData theoryData)
+        {
+            var context = TestUtilities.WriteHeader($"{this}.ReadEncryption", theoryData);
+
+            try
+            {
+                var proofEncryption = theoryData.WsTrustSerializer.ReadProofEncryption(theoryData.Reader, theoryData.WsSerializationContext);
+                theoryData.ExpectedException.ProcessNoException(context);
+                IdentityComparer.AreEqual(proofEncryption, theoryData.ProofEncryption, context);
+            }
+            catch (Exception ex)
+            {
+                theoryData.ExpectedException.ProcessException(ex, context);
+            }
+
+            TestUtilities.AssertFailIfErrors(context);
+        }
+
+        public static TheoryData<WsTrustTheoryData> ReadProofEncryptionTestCases
+        {
+            get
+            {
+                var saml2TokenHandler = new Saml2SecurityTokenHandler();
+                var saml2Token = saml2TokenHandler.ReadToken(ReferenceXml.Saml2Valid);
+
+                var theoryData = new TheoryData<WsTrustTheoryData>
+                {
+                    new WsTrustTheoryData(WsTrustVersion.Trust14)
+                    {
+                        ExpectedException = ExpectedException.ArgumentNullException("reader"),
+                        Reader = null,
+                        TestId = "ReaderNull",
+                    },
+                    new WsTrustTheoryData(WsTrustVersion.Trust14)
+                    {
+                        ExpectedException = ExpectedException.XmlReadException(),
+                        Reader = WsTrustReferenceXml.RandomElementReader,
+                        TestId = "ReaderNotOnCorrectElement",
+                    },
+                    new WsTrustTheoryData(WsTrustVersion.TrustFeb2005)
+                    {
+                        Reader = WsTrustReferenceXml.GetProofEncryptionSecurityTokenReader(WsTrustConstants.TrustFeb2005, ReferenceXml.Saml2Valid),
+                        TestId = "ProofEncryption_WsTrustFeb2005",
+                        ProofEncryption = new SecurityTokenElement(saml2Token),
+                    },
+                    new WsTrustTheoryData(WsTrustVersion.Trust13)
+                    {
+                        Reader = WsTrustReferenceXml.GetProofEncryptionSecurityTokenReader(WsTrustConstants.Trust13, ReferenceXml.Saml2Valid),
+                        TestId = "ProofEncryption_WsTrust13",
+                        ProofEncryption = new SecurityTokenElement(saml2Token),
+                    }
+                };
+
+                return theoryData;
+            }
+        }
+
+
         [Theory, MemberData(nameof(ReadRequestedAttachedReferenceTestCases))]
         public void ReadRequestedAttachedReference(WsTrustTheoryData theoryData)
         {
@@ -879,13 +996,58 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust.Tests
             }
         }
 
+        [Theory, MemberData(nameof(WriteEncryptionTestCases))]
+        public void WriteEncryption(WsTrustTheoryData theoryData)
+        {
+            var context = TestUtilities.WriteHeader($"{this}.WriteEncryption", theoryData);
+            try
+            {
+                theoryData.WsTrustSerializer.WriteEncryption(theoryData.Writer, theoryData.WsSerializationContext, theoryData.Encryption);
+                //IdentityComparer.AreEqual(lifetime, theoryData.Lifetime, context);
+            }
+            catch (Exception ex)
+            {
+                theoryData.ExpectedException.ProcessException(ex, context);
+            }
+
+            TestUtilities.AssertFailIfErrors(context);
+        }
+
+        public static TheoryData<WsTrustTheoryData> WriteEncryptionTestCases
+        {
+            get
+            {
+                return new TheoryData<WsTrustTheoryData>
+                {
+                    new WsTrustTheoryData(new MemoryStream())
+                    {
+                        ExpectedException = ExpectedException.ArgumentNullException("serializationContext"),
+                        First = true,
+                        ProofEncryption = new SecurityTokenElement(new SecurityTokenReference()),
+                        TestId = "SerializationContextNull"
+                    },
+                    new WsTrustTheoryData(WsTrustVersion.Trust13)
+                    {
+                        ExpectedException = ExpectedException.ArgumentNullException("writer"),
+                        ProofEncryption = new SecurityTokenElement(new SecurityTokenReference()),
+                        TestId = "WriterNull",
+                    },
+                    new WsTrustTheoryData(new MemoryStream(), WsTrustVersion.Trust13)
+                    {
+                        ExpectedException = ExpectedException.ArgumentNullException("encryption"),
+                        TestId = "EncryptionNull"
+                    }
+                };
+            }
+        }
+
         [Theory, MemberData(nameof(WriteProofEncryptionTestCases))]
         public void WriteProofEncryption(WsTrustTheoryData theoryData)
         {
             var context = TestUtilities.WriteHeader($"{this}.WriteProofEncryption", theoryData);
             try
             {
-                WsTrustSerializer.WriteProofEncryption(theoryData.Writer, theoryData.WsSerializationContext, theoryData.ProofEncryption);
+                theoryData.WsTrustSerializer.WriteProofEncryption(theoryData.Writer, theoryData.WsSerializationContext, theoryData.ProofEncryption);
                 //IdentityComparer.AreEqual(lifetime, theoryData.Lifetime, context);
             }
             catch (Exception ex)
