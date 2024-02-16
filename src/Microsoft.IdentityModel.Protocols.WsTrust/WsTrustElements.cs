@@ -114,6 +114,11 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust
         public const string DelegateTo = "DelegateTo";
 
         /// <summary>
+        /// Gets the value for "Encryption"
+        /// </summary>
+        public const string Encryption = "Encryption";
+
+        /// <summary>
         /// Gets the value for "EncryptionAlgorithm"
         /// </summary>
         public const string EncryptionAlgorithm = "EncryptionAlgorithm";

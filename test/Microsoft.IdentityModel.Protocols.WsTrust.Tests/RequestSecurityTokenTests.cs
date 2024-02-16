@@ -215,29 +215,91 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust.Tests
                         First = true,
                         PropertiesToIgnoreWhenComparing = propertiesToIgnoreWhenComparing,
                         WsTrustRequest = wsTrustRequest,
-                        TestId = "WsTrustRequestWithSaml2OBO",
+                        TestId = "WsTrustRequest",
                         WsTrustVersion = WsTrustVersion.Trust13
                     },
                     new WsTrustTheoryData
                     {
                         WsTrustRequest = new WsTrustRequest(trustConstants.WsTrustActions.Issue)
                         {
-                            AppliesTo = WsDefaults.AppliesTo,
+                            OnBehalfOf = new SecurityTokenElement(saml2SecurityToken),
+                        },
+                        TestId = "WsTrustRequestWithOnBehalfOf",
+                        WsTrustVersion = WsTrustVersion.Trust13
+                    },
+                    new WsTrustTheoryData
+                    {
+                        WsTrustRequest = new WsTrustRequest(trustConstants.WsTrustActions.Issue)
+                        {
+                            AuthenticationType = "AuthenticationType",
+                            KeyType = trustConstants.WsTrustKeyTypes.Symmetric,
+                            KeySizeInBits = 256,
+                            SignatureAlgorithm = SecurityAlgorithms.RsaSha256Signature,
+                            EncryptionAlgorithm = SecurityAlgorithms.Aes256Encryption,
+                            CanonicalizationAlgorithm = SecurityAlgorithms.ExclusiveC14n,
+                            ComputedKeyAlgorithm = trustConstants.WsTrustKeyTypes.PSHA1,
+                            Encryption = new SecurityTokenElement(WsDefaults.SecurityTokenReference),
+                            ProofEncryption = new SecurityTokenElement(WsDefaults.SecurityTokenReference),
+                            KeyWrapAlgorithm = SecurityAlgorithms.Aes256KeyWrap,
+                            UseKey = new UseKey(new SecurityTokenElement(WsDefaults.SecurityTokenReference)) { SignatureId = Guid.NewGuid().ToString() },
+                            SignWith = SecurityAlgorithms.Aes128CbcHmacSha256,
+                            EncryptWith = SecurityAlgorithms.RsaOaepKeyWrap,
+                        },
+                        TestId = "WsTrustRequestWithKeyAndEncryptionRequirements",
+                        WsTrustVersion = WsTrustVersion.Trust13
+                    },
+                    new WsTrustTheoryData
+                    {
+                        WsTrustRequest = new WsTrustRequest(trustConstants.WsTrustActions.Issue)
+                        {
+                            PolicyReference = new PolicyReference
+                            {
+                                Uri = "MSExchange.SharingCalendarFreeBusy",
+                                DigestAlgorithm = SecurityAlgorithms.Sha256Digest,
+                                Digest = Guid.NewGuid().ToString()
+                            },
+                        },
+                        TestId = "WsTrustRequestWithPolicies",
+                        WsTrustVersion = WsTrustVersion.Trust13
+                    },
+                    new WsTrustTheoryData
+                    {
+                        WsTrustRequest = new WsTrustRequest(trustConstants.WsTrustActions.Issue)
+                        {
                             InteractiveChallenge = interactiveChallenge,
                         },
-                        TestId = "WsTrustRequestWithInteractiveChallenge",
+                        TestId = "WsTrustRequestWithUserInteractionChallenge",
                         WsTrustVersion = WsTrustVersion.Trust13
                     },
                     new WsTrustTheoryData
                     {
                         WsTrustRequest = new WsTrustRequest(trustConstants.WsTrustActions.Issue)
                         {
-                            AppliesTo = WsDefaults.AppliesTo,
                             InteractiveChallengeResponse = interactiveChallengeResponse,
                         },
-                        TestId = "WsTrustRequestWithInteractiveChallengeResponse",
+                        TestId = "WsTrustRequestWithUserInteractionChallengeResponse",
                         WsTrustVersion = WsTrustVersion.Trust13
-                    }
+                    },
+                    new WsTrustTheoryData
+                    {
+                        WsTrustRequest = new WsTrustRequest(trustConstants.WsTrustActions.Issue)
+                        {
+                            ActAs = new SecurityTokenElement(saml2SecurityToken),
+                        },
+                        TestId = "WsTrustRequestWithActAs",
+                        WsTrustVersion = WsTrustVersion.Trust13
+                    },
+                    new WsTrustTheoryData
+                    {
+                        WsTrustRequest = new WsTrustRequest(trustConstants.WsTrustActions.Issue)
+                        {
+                            Delegatable = false,
+                            Forwardable = true,
+                            DelegateTo = WsDefaults.SecurityTokenReference
+                        },
+                        TestId = "WsTrustRequestWithDelegationAndForwardingRequirements",
+                        WsTrustVersion = WsTrustVersion.Trust13
+                    },
                 };
             }
         }
