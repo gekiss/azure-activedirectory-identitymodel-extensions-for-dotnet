@@ -576,6 +576,10 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust
             {
                 trustRequest.DelegateTo = ReadDelegateTo(reader, serializationContext);
             }
+            else if (reader.IsStartElement(WsTrustElements.Entropy, serializationContext.TrustConstants.Namespace))
+            {
+                trustRequest.Entropy = ReadEntropy(reader, serializationContext);
+            }
             else if (reader.IsLocalName(WsPolicyElements.AppliesTo))
             {
                 foreach (string @namespace in WsPolicyConstants.KnownNamespaces)
