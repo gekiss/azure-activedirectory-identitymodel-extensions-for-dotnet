@@ -60,7 +60,7 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust
         /// <exception cref="ArgumentNullException">thrown if <paramref name="binarySecret"/> is null.</exception>
         public RequestedProofToken(BinarySecret binarySecret)
         {
-            BinarySecret = binarySecret;
+            BinarySecret = binarySecret ?? throw LogHelper.LogArgumentNullException(nameof(binarySecret));
         }
 
         /// <summary>
@@ -70,9 +70,9 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust
         /// <param name="computedKeyAlgorithm">the algorithm to apply when creating the security key.
         /// a typical value is: http://docs.oasis-open.org/ws-sx/ws-trust/200512/CK/PSHA1 </param>
         /// <exception cref="ArgumentNullException">thrown if <paramref name="computedKeyAlgorithm"/> is null or empty string.</exception>
-        internal RequestedProofToken(string computedKeyAlgorithm)
+        public RequestedProofToken(string computedKeyAlgorithm)
         {
-            ComputedKeyAlgorithm = computedKeyAlgorithm;
+            ComputedKeyAlgorithm = computedKeyAlgorithm ?? throw LogHelper.LogArgumentNullException(nameof(computedKeyAlgorithm));
         }
 
         /// <summary>
