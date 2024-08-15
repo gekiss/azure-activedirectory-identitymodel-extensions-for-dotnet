@@ -79,7 +79,7 @@ namespace Microsoft.IdentityModel.Protocols.WsTrust
         /// </summary>
         public WsTrustFeb2005KeyTypes()
         {
-            Bearer = "http://schemas.xmlsoap.org/ws/2005/02/trust/Bearer";
+            Bearer = "http://schemas.xmlsoap.org/ws/2005/05/identity/NoProofKey";
             PSHA1 = "http://schemas.xmlsoap.org/ws/2005/02/trust/CK/PSHA1";
             PublicKey = "http://schemas.xmlsoap.org/ws/2005/02/trust/PublicKey";
             Symmetric = "http://schemas.xmlsoap.org/ws/2005/02/trust/SymmetricKey";
